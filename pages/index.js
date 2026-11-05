@@ -102,13 +102,12 @@ export default function Dashboard() {
     }
   }, [isDark]);
 
-  const [inputMode, setInputMode] = useState('quick'); 
   const [incidentText, setIncidentText] = useState(PRESET_SCENARIOS[0].text);
   
   const [chatMessages, setChatMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello. I am the City Emergency Intake AI. Please provide the incident location, observed conditions, or injuries. I will synthesize the briefing and dispatch the multi-agent emergency cascade."
+      content: "Hello. I am the City Emergency Intake AI. Please provide the incident location, observed conditions, or upload evidence. I will synthesize the briefing and dispatch the multi-agent emergency cascade."
     }
   ]);
   const [chatInput, setChatInput] = useState('');
@@ -682,233 +681,132 @@ export default function Dashboard() {
           <div className="rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm p-5 flex flex-col gap-4">
             
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                Intake Channel
-              </span>
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-medium">
-                <button
-                  type="button"
-                  onClick={() => setInputMode('quick')}
-                  className={`px-3 py-1.5 rounded-lg transition ${
-                    inputMode === 'quick'
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm font-semibold'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  ⚡ Direct Dispatch
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setInputMode('chat')}
-                  className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-                    inputMode === 'chat'
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm font-semibold'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Bot className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>Gemini Assistant</span>
-                </button>
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-xl bg-slate-900 dark:bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <Bot className="w-4 h-4 text-blue-400 dark:text-white" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider block">
+                    AI Emergency Assistant
+                  </span>
+                  <span className="text-[10px] text-slate-500 block">
+                    Conversational Triage & Dynamic Multi-Agent Dispatch
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {chatMessages.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChatMessages([
+                        {
+                          role: 'assistant',
+                          content: "Hello. I am the City Emergency Intake AI. Please provide the incident location, observed conditions, or upload evidence. I will synthesize the briefing and dispatch the multi-agent emergency cascade."
+                        }
+                      ]);
+                      setActiveDossier(null);
+                    }}
+                    className="text-[11px] font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition"
+                    title="Start fresh conversation"
+                  >
+                    Reset Chat
+                  </button>
+                )}
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Intake AI Online" />
               </div>
             </div>
 
-            {/* MODE 1: Direct Dispatch */}
-            {inputMode === 'quick' && (
-              <div className="space-y-4">
-                {/* Compact Dropdown Selector for Example Scenarios */}
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Sliders className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
-                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Preset Scenarios:
-                    </span>
-                  </div>
-                  <select
-                    id="scenarioSelect"
-                    onChange={(e) => {
-                      const idx = parseInt(e.target.value, 10);
-                      if (!isNaN(idx) && PRESET_SCENARIOS[idx]) {
-                        selectScenario(PRESET_SCENARIOS[idx]);
-                      }
-                    }}
-                    defaultValue=""
-                    className="flex-1 max-w-[270px] text-xs rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-blue-500 font-medium cursor-pointer truncate"
-                  >
-                    <option value="" disabled>Choose an example scenario...</option>
-                    {PRESET_SCENARIOS.map((sc, i) => (
-                      <option key={i} value={i}>
-                        {sc.title} ({sc.severity})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Input Textarea with 1-Click CAD Scenario Chips */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label htmlFor="incidentText" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                      Incident Brief / Custom Report:
-                    </label>
-                    <div className="flex items-center gap-3">
-                      {incidentText && (
-                        <button
-                          type="button"
-                          onClick={() => setIncidentText('')}
-                          className="text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 flex items-center gap-1 transition"
-                          title="Clear all text"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                          <span>Clear All</span>
-                        </button>
-                      )}
-                      <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">Proportional Response Active</span>
+            {/* Conversational Assistant */}
+            <div className="flex flex-col gap-3">
+              <div className="h-64 overflow-y-auto bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-3 text-xs" ref={chatScrollRef}>
+                {chatMessages.map((msg, idx) => (
+                  <div key={idx} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {msg.role !== 'user' && (
+                      <div className="w-6 h-6 rounded-full bg-slate-900 text-white dark:bg-blue-600 flex items-center justify-center text-[10px] shrink-0 mt-0.5 shadow-xs">
+                        <Bot className="w-3.5 h-3.5" />
+                      </div>
+                    )}
+                    <div className={`p-3 rounded-2xl max-w-[85%] leading-relaxed ${
+                      msg.role === 'user'
+                        ? 'bg-slate-900 text-white dark:bg-blue-600 rounded-br-sm shadow-xs'
+                        : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-bl-sm shadow-xs'
+                    }`}>
+                      {msg.content}
                     </div>
-                  </div>
-
-                  {/* 1-Click CAD Scenario Chips */}
-                  <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOpticalScenario('safe');
-                        setIncidentText("Optical surveillance confirms safe municipal baseline. Harmless stationary vehicle parked peacefully with zero collisions, zero injuries, zero structural damage, and no active hazards. Confirm safe green-light status.");
-                      }}
-                      className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition flex items-center gap-1"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span>🟢 All Clear (Safe)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOpticalScenario('minor');
-                        setIncidentText("Local street incident: a person fell down on the road due to a minor motorcycle/bike skid. Subject is conscious, minor abrasion, traffic slowed. Requesting local EMS ambulance and traffic officer.");
-                      }}
-                      className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition flex items-center gap-1"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                      <span>🟡 Bike Skid (Minor)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOpticalScenario('critical');
-                        setIncidentText("Heavy odor of natural gas reported near 5th Ave & Elm Junction with localized surface fire threatening adjacent commercial buildings. Vehicles immobilized in intersection.");
-                      }}
-                      className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/60 hover:bg-red-100 dark:hover:bg-red-900/60 transition flex items-center gap-1"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                      <span>🔴 Gas Rupture (Critical)</span>
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <textarea
-                      id="incidentText"
-                      rows={4}
-                      value={incidentText}
-                      onChange={(e) => setIncidentText(e.target.value)}
-                      placeholder="Enter incident description (e.g., 'a person fell down on road by bike skid' or 'substation fire')..."
-                      className="w-full text-xs rounded-xl p-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-blue-500/40 transition resize-none leading-relaxed"
-                    />
-                    {incidentText && (
-                      <button
-                        type="button"
-                        onClick={() => setIncidentText('')}
-                        className="absolute top-2.5 right-2.5 p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-white/80 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
-                        title="Clear text"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+                    {msg.role === 'user' && (
+                      <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+                        <User className="w-3.5 h-3.5" />
+                      </div>
                     )}
                   </div>
-                </div>
+                ))}
 
-                <button
-                  type="button"
-                  onClick={() => handleRunInvestigation()}
-                  disabled={loading || !incidentText.trim()}
-                  className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Orchestrating 3-Agent Cascade...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      <span>Deploy Autonomous Emergency Investigation</span>
-                    </>
-                  )}
-                </button>
+                {chatLoading && (
+                  <div className="flex items-center gap-2 text-slate-500 text-xs italic">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-700 dark:text-blue-500" />
+                    <span>Analyzing scenario with municipal AI operator...</span>
+                  </div>
+                )}
               </div>
-            )}
 
-            {/* MODE 2: Gemini Conversational Assistant */}
-            {inputMode === 'chat' && (
-              <div className="flex flex-col gap-3">
-                <div className="h-60 overflow-y-auto bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-3 text-xs" ref={chatScrollRef}>
-                  {chatMessages.map((msg, idx) => (
-                    <div key={idx} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      {msg.role !== 'user' && (
-                        <div className="w-6 h-6 rounded-full bg-slate-900 text-white dark:bg-blue-600 flex items-center justify-center text-[10px] shrink-0 mt-0.5">
-                          <Bot className="w-3.5 h-3.5" />
-                        </div>
-                      )}
-                      <div className={`p-3 rounded-2xl max-w-[85%] leading-relaxed ${
-                        msg.role === 'user'
-                          ? 'bg-slate-900 text-white dark:bg-blue-600 rounded-br-sm'
-                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-bl-sm shadow-xs'
-                      }`}>
-                        {msg.content}
-                      </div>
-                      {msg.role === 'user' && (
-                        <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-[10px] shrink-0 mt-0.5">
-                          <User className="w-3.5 h-3.5" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-
-                  {chatLoading && (
-                    <div className="flex items-center gap-2 text-slate-500 text-xs italic">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-700 dark:text-blue-500" />
-                      <span>Analyzing incident context with city telemetry...</span>
-                    </div>
-                  )}
+              {/* Ready Incident Dossier Card */}
+              {activeDossier && (
+                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/80 text-xs">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Incident Dossier Synthesized
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400">Ready for Dispatch</span>
+                  </div>
+                  <p className="text-emerald-950 dark:text-emerald-100 italic leading-relaxed">
+                    &ldquo;{activeDossier}&rdquo;
+                  </p>
                 </div>
+              )}
 
-                <form onSubmit={handleSendChatMessage} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Type to intake bot: 'cyclist skidded on 5th Ave'..."
-                    className="flex-1 text-xs rounded-xl px-3 py-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-blue-500/40"
-                  />
-                  <button
-                    type="submit"
-                    disabled={chatLoading || !chatInput.trim()}
-                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-xs transition disabled:opacity-40"
-                  >
-                    Send
-                  </button>
-                </form>
-
+              {/* Chat Input Bar */}
+              <form onSubmit={handleSendChatMessage} className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Describe incident or ask AI (e.g. 'cyclist collision on 5th Ave', 'gas leak near substation')..."
+                  className="flex-1 text-xs rounded-xl px-3 py-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-blue-500/40"
+                />
                 <button
-                  type="button"
-                  onClick={() => {
-                    const textToSend = activeDossier || chatMessages[chatMessages.length - 1]?.content || incidentText;
-                    handleRunInvestigation(textToSend);
-                  }}
-                  disabled={loading || chatMessages.length < 2}
-                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition disabled:opacity-40"
+                  type="submit"
+                  disabled={chatLoading || !chatInput.trim()}
+                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-xs transition disabled:opacity-40 flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Authorize Multi-Agent Dispatch from Dialogue</span>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Send</span>
                 </button>
-              </div>
-            )}
+              </form>
+
+              {/* 1-Click Multi-Agent Cascade Dispatch Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  const textToSend = activeDossier || chatMessages[chatMessages.length - 1]?.content || incidentText;
+                  handleRunInvestigation(textToSend);
+                }}
+                disabled={loading || (chatMessages.length < 2 && !activeDossier && !incidentText)}
+                className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Deploying Multi-Agent Emergency Cascade...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>Authorize & Deploy Multi-Agent Emergency Cascade</span>
+                  </>
+                )}
+              </button>
+            </div>
 
           </div>
 
