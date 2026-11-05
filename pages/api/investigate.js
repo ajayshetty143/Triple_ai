@@ -28,90 +28,86 @@ async function callLLM({ systemPrompt, userPrompt, jsonMode = true, imageUrl = n
     throw new Error('GROQ_API_KEY is missing in environment variables.');
   }
 
-  // If an image is attached, prioritize the multimodal vision model qwen/qwen3.8-27b
+  // Model Pool: Try vision first if image is provided, with text model failovers
   const modelPool = imageUrl 
-    ? ['qwen/qwen3.8-27b'] 
+    ? ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'] 
     : ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b'];
 
-  const userMessageContent = imageUrl
-    ? [
-        { type: 'text', text: userPrompt },
-        { type: 'image_url', image_url: { url: imageUrl } },
-      ]
-    : userPrompt;
+  let activeImageUrl = imageUrl;
 
   for (let i = 0; i < modelPool.length; i++) {
     const currentModel = modelPool[i];
-    try {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
+    const isVision = Boolean(activeImageUrl && currentModel === 'qwen/qwen3.8-27b');
+
+    const userMessageContent = isVision
+      ? [
+          { type: 'text', text: userPrompt },
+          { type: 'image_url', image_url: { url: activeImageUrl } },
+        ]
+      : userPrompt;
+
+    for (let tryJsonMode of [jsonMode, false]) {
+      try {
+        const bodyPayload = {
           model: currentModel,
           max_tokens: 450,
           temperature: 0.1,
-          response_format: jsonMode ? { type: 'json_object' } : undefined,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userMessageContent },
           ],
-        }),
-      });
+        };
+        if (tryJsonMode) {
+          bodyPayload.response_format = { type: 'json_object' };
+        }
 
-      // Handle 429 Rate Limit seamlessly by failing over to the next model in pool
-      if (response.status === 429) {
-        console.warn(`Groq 429 Rate Limit hit on model ${currentModel}. Auto-switching to next model in pool...`);
-        if (i < modelPool.length - 1) {
-          continue; // Seamlessly try next model
-        } else {
-          console.warn('All models rate limited. Waiting 3.2s cooldown backoff...');
-          await new Promise(r => setTimeout(r, 3200));
-          const retryRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-              model: 'qwen/qwen3.8-27b',
-              max_tokens: 450,
-              temperature: 0.1,
-              response_format: jsonMode ? { type: 'json_object' } : undefined,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userMessageContent },
-              ],
-            }),
-          });
-          if (retryRes.ok) {
-            const data = await retryRes.json();
-            const content = data.choices[0]?.message?.content || '{}';
-            return jsonMode ? cleanAndParseJSON(content) : content;
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(bodyPayload),
+        });
+
+        if (response.status === 429) {
+          console.warn(`Groq 429 Rate Limit hit on model ${currentModel}. Auto-switching to next model in pool...`);
+          break; // Switch to next model in pool
+        }
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+
+          // 1. If image URL is 404 or fails retrieval, recover gracefully by analyzing text report
+          if (errorBody.includes('failed to retrieve media') || errorBody.includes('404')) {
+            console.warn('Image retrieval failed on remote URL, falling back to text-only investigation...');
+            activeImageUrl = null;
+            continue;
           }
-        }
-      }
 
-      if (!response.ok) {
-        const errorBody = await response.text();
+          // 2. If Groq's grammar validator failed with json_validate_failed, retry without strict response_format
+          if (errorBody.includes('json_validate_failed')) {
+            console.warn('Groq json_validate_failed, retrying without strict json_object constraint...');
+            continue; // will retry with tryJsonMode = false
+          }
+
+          if (i < modelPool.length - 1) {
+            console.warn(`Error on ${currentModel} (${response.status}), switching model:`, errorBody);
+            break;
+          }
+          throw new Error(`Groq API error (${response.status}): ${errorBody}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices[0]?.message?.content || '{}';
+        return jsonMode ? cleanAndParseJSON(content) : content;
+      } catch (err) {
         if (i < modelPool.length - 1) {
-          console.warn(`Error on ${currentModel} (${response.status}), switching model:`, errorBody);
-          continue;
+          console.warn(`Attempt on ${currentModel} failed, trying next:`, err.message);
+          break;
         }
-        throw new Error(`Groq API error (${response.status}): ${errorBody}`);
+        throw err;
       }
-
-      const data = await response.json();
-      const content = data.choices[0]?.message?.content || '{}';
-      return jsonMode ? cleanAndParseJSON(content) : content;
-    } catch (err) {
-      if (i < modelPool.length - 1) {
-        console.warn(`Attempt on ${currentModel} failed, trying ${modelPool[i + 1]}:`, err.message);
-        continue;
-      }
-      throw err;
     }
   }
 }

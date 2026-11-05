@@ -64,7 +64,7 @@ const PRESET_SCENARIOS = [
     icon: Activity,
     text: "Local traffic incident: a person fell down on the roadway due to a minor motorcycle/bike skid. Subject is conscious, minor abrasion, traffic slowed. Deploy local EMS ambulance and traffic officer.",
     cctvId: "CCTV-05 (4th Ave Crossing)",
-    cctvImage: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?auto=format&fit=crop&w=800&q=80"
+    cctvImage: "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80"
   },
   {
     title: "Gas Mainline Rupture & Structural Hazard",

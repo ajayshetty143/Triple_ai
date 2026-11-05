@@ -46,32 +46,37 @@ Strict Rule: Output valid JSON ONLY matching this structure:
 
   try {
     let data = null;
+    let useJsonFormat = true;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
+        const bodyObj = {
+          model: 'qwen/qwen3.8-27b',
+          max_tokens: 350,
+          temperature: 0.1,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: promptText },
+                {
+                  type: 'image_url',
+                  image_url: { url: imagePayload },
+                },
+              ],
+            },
+          ],
+        };
+        if (useJsonFormat) {
+          bodyObj.response_format = { type: 'json_object' };
+        }
+
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({
-            model: 'qwen/qwen3.8-27b',
-            max_tokens: 350,
-            temperature: 0.1,
-            response_format: { type: 'json_object' },
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  { type: 'text', text: promptText },
-                  {
-                    type: 'image_url',
-                    image_url: { url: imagePayload },
-                  },
-                ],
-              },
-            ],
-          }),
+          body: JSON.stringify(bodyObj),
         });
 
         if (response.status === 429 && attempt === 0) {
@@ -82,6 +87,11 @@ Strict Rule: Output valid JSON ONLY matching this structure:
 
         if (!response.ok) {
           const errText = await response.text();
+          if (errText.includes('json_validate_failed') && useJsonFormat) {
+            console.warn('Vision json_validate_failed, retrying without strict json_object constraint...');
+            useJsonFormat = false;
+            continue;
+          }
           throw new Error(`Groq Vision API error (${response.status}): ${errText}`);
         }
 
