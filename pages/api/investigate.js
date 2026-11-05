@@ -62,7 +62,7 @@ export default async function handler(req, res) {
   }
 
   const startTime = Date.now();
-  const { incident } = req.body;
+  const { incident, mediaEvidence, cameraSource } = req.body;
 
   if (!incident || typeof incident !== 'string') {
     return res.status(400).json({ error: 'Please provide a valid incident description.' });
@@ -88,8 +88,8 @@ export default async function handler(req, res) {
     // STEP 1: AGENT 1 - Data Gatherer & Telemetry Specialist
     // ==========================================
     const agent1SystemPrompt = `You are Agent 1 (Data Gatherer & Urban Sensor Specialist) in an autonomous city emergency command system.
-Your job is to cross-reference the reported citizen incident with the live sensor telemetry from our database.
-Analyze which sensors indicate anomalies, identify the primary affected zone, and summarize the ground truth.
+Your job is to cross-reference the reported citizen incident with the live sensor telemetry from our database AND any visual evidence from CCTV/Live Camera feeds.
+Analyze which sensors indicate anomalies, identify optical or visual corroborations from cameras, determine the primary affected zone, and summarize the ground truth.
 
 Strict Rule: Output valid JSON ONLY matching this structure:
 {
@@ -98,12 +98,21 @@ Strict Rule: Output valid JSON ONLY matching this structure:
   "critical_sensors": [
     { "id": "SENSOR_ID", "name": "SENSOR_NAME", "status": "STATUS", "telemetry_finding": "brief finding" }
   ],
+  "visual_surveillance_analysis": "Optical findings from camera feed/uploaded visual evidence (e.g. visible water depth, smoke plumes, trapped vehicles)",
   "environmental_factors": "e.g. Weather, congestion, or water levels",
-  "data_synthesis": "Crisp paragraph summarizing what the data objectively reveals."
+  "data_synthesis": "Crisp paragraph summarizing what both the sensor data and visual surveillance objectively reveal."
 }`;
+
+    const visualContext = mediaEvidence 
+      ? `VISUAL EVIDENCE / SURVEILLANCE FEED:
+Source: ${cameraSource || 'Live Stream / Citizen Upload'}
+Visual Analysis Payload: Visual evidence provided and active in command center.`
+      : `VISUAL EVIDENCE: No live optical feed attached. Relying purely on IoT telemetry.`;
 
     const agent1UserPrompt = `CITIZEN INCIDENT REPORT:
 "${incident}"
+
+${visualContext}
 
 LIVE CITY SENSOR TELEMETRY FROM SUPABASE:
 ${JSON.stringify(sensors, null, 2)}
