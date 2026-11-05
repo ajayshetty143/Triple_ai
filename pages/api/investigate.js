@@ -148,29 +148,26 @@ export default async function handler(req, res) {
     // STEP 1: AGENT 1 - Data Gatherer & Optical Intelligence Specialist
     // ==========================================
     const agent1SystemPrompt = `You are Agent 1 (Data Gatherer & Optical Intelligence Specialist) in an autonomous city emergency command system.
-Your job is to critically evaluate the attached optical image evidence (if provided), the incident report, and database sensors.
+Your job is to critically evaluate the citizen incident report, database sensors, and attached optical image evidence (if provided).
 
-CRITICAL FIRST QUESTION: IS THERE ANY ACTUAL HARM, HAZARD, OR EMERGENCY PRESENT?
-- Examine the attached visual image directly (if provided) and the incident report:
-  • If the image shows an active collision, a fallen cyclist or pedestrian lying on the asphalt, an injured person, or a vehicle accident:
-    - You MUST mark is_harm_detected as true.
-    - You MUST classify this incident as "ROUTINE_LOCAL".
-    - Describe the exact scene in visual_surveillance_analysis (e.g. "Visual inspection confirms a cyclist lying on the road next to a fallen bicycle and vehicle. Collision and casualty detected.").
-    - critical_sensors MUST be empty ([]).
-  • If the image shows a normal peaceful scene, a parked vehicle/motorcycle with no crash damage, an empty street, or normal pedestrian:
-    - You MUST mark is_harm_detected as false.
-    - You MUST classify this incident as "ALL_CLEAR_SAFE".
-    - State clearly in visual_surveillance_analysis: "Visual inspection confirms a safe, normal scene with NO collision, NO fire, NO spill, NO injuries, and NO structural damage."
-    - critical_sensors MUST be empty ([]).
-  • Only classify as "SEVERE" or "CATASTROPHIC" if an actual hazardous crisis is reported (gas explosion, heavy flood, substation fire).
+CRITICAL INCIDENT TRIAGE & SOURCE HIERARCHY RULES:
+1. CITIZEN EMERGENCY REPORTS & REPORTED HAZARDS:
+   - If the Incident Report explicitly describes an emergency (e.g. "fire accident to neighbour building", "structure fire", "building blaze", "fallen cyclist", "collision", "gas leak", "explosion", "flood", or injured casualty):
+     • You MUST mark is_harm_detected as TRUE.
+     • For fires, building blazes, explosions, gas ruptures, or floods: classify incident_classification as "SEVERE" (or "CATASTROPHIC").
+     • For traffic accidents, fallen cyclists, pedestrian injuries, or minor collisions: classify incident_classification as "ROUTINE_LOCAL" (or "MODERATE").
+     • Visual correlation rule: If the attached camera feed is a fixed municipal CCTV camera (e.g. CCTV-09) showing normal street traffic or a parked motorcycle, DO NOT declare the scene safe! Explain clearly in visual_surveillance_analysis that the fixed municipal perimeter camera is monitoring background sector traffic and does not have direct line-of-sight into the reported emergency location; priority emergency dispatch is authorized based on the citizen report.
+     • If an uploaded image or video shows the fire, smoke, collision, or casualty, describe those visual damage indicators in visual_surveillance_analysis.
 
-CRITICAL SENSOR DECOUPLING RULE:
-- The database contains background sensors (e.g. SENS-GAS-07 gas pipeline, SENS-FLOOD-01 flood gauge) which are remote citywide monitors.
-- DO NOT correlate gas or flood sensors with a vehicle, motorcycle, cyclist, or street observation unless the report explicitly states a gas explosion, fire, or flood!
-- If the report or visual feed is about a motorcycle, bicycle, parked vehicle, normal street, or safe baseline:
-  • All background gas/flood sensors are UNRELATED.
-  • critical_sensors MUST be empty ([]).
-  • UNDER NO CIRCUMSTANCES should you trigger a gas leak or evacuation for a vehicle, motorcycle, or peaceful scene!
+2. WHEN TO DECLARE ALL_CLEAR_SAFE:
+   - You may ONLY mark is_harm_detected as FALSE and classify as "ALL_CLEAR_SAFE" when:
+     • The incident report describes a routine safe baseline, harmless stationary vehicle, or peaceful monitoring, AND
+     • The visual evidence confirms no active fire, no collision, no injury, and no damage.
+
+3. SENSOR DECOUPLING RULE:
+   - The database contains background sensors (e.g. SENS-GAS-07 gas pipeline, SENS-FLOOD-01 flood gauge) which are remote citywide monitors.
+   - DO NOT correlate gas or flood sensors with a vehicle, motorcycle, cyclist, or building fire unless the report explicitly states a gas explosion, pipeline leak, or flood!
+   - If unrelated, critical_sensors MUST be empty ([]).
 
 Strict Rule: Output valid JSON ONLY matching this structure:
 {
@@ -217,19 +214,27 @@ Inspect the optical evidence and provide your structured JSON data summary now.`
     // STEP 2: AGENT 2 - Infrastructure Risk Analyst
     // ==========================================
     const agent2SystemPrompt = `You are Agent 2 (Infrastructure Risk Analyst) in an autonomous city emergency command system.
-You receive the exact telemetry summary from Agent 1.
+You receive the exact situational report from Agent 1.
 
-CRITICAL THREAT & PROPORTIONALITY RULE:
-- If Agent 1 classifies the event as "ALL_CLEAR_SAFE" (no harm, normal vehicle photo, peaceful scene):
+CRITICAL THREAT & PROPORTIONALITY RULES:
+- If Agent 1 classifies as "SEVERE" or "CATASTROPHIC" (active fire, building fire, explosion, gas main rupture, flood):
+  • overall_threat_level MUST be "CRITICAL".
+  • primary_hazards MUST identify the urgent fire/life-safety risks (e.g. ["Active Structure Fire", "Rapid Flame Propagation to Adjacent Buildings", "Smoke Inhalation", "Structural Collapse Risk"]).
+  • cascading_vulnerabilities MUST identify adjacent infrastructure, residential/commercial power isolation, and civilian transit grid.
+  • time_to_critical_failure: "Immediate (< 8 minutes to flashover/structure compromise)".
+  • analyst_assessment: "High-urgency emergency detected. Immediate multi-unit fire suppression and emergency cordon required."
+- If Agent 1 classifies as "ROUTINE_LOCAL" or "MODERATE" (e.g. bike skid, fallen cyclist, local collision):
+  • overall_threat_level MUST be "LOW" (or "MEDIUM").
+  • primary_hazards: ["Local Roadway Obstruction", "Minor Civilian Injury"].
+  • cascading_vulnerabilities: [{ "system": "Transit Corridors", "risk": "Localized lane slowdown. Primary arterials open." }].
+  • time_to_critical_failure: "15-30 minutes (Traffic queue build-up)".
+  • analyst_assessment: "Routine local traffic incident. Routine paramedic and patrol dispatch required."
+- If Agent 1 classifies the event as "ALL_CLEAR_SAFE" (safe baseline, parked vehicle, peaceful scene):
   • overall_threat_level MUST be "ALL_CLEAR".
   • primary_hazards MUST be ["No active hazards detected - Normal municipal operations"].
   • cascading_vulnerabilities MUST be [{ "system": "City Infrastructure", "risk": "Normal safe baseline. No infrastructure risk." }].
   • time_to_critical_failure: "None (System Stable)".
   • analyst_assessment: "Optical and telemetry review confirms baseline stability. Zero emergency risk."
-- If Agent 1 classifies as "ROUTINE_LOCAL" (e.g. bike skid, minor road blockage):
-  • overall_threat_level MUST be "LOW".
-  • Cascading risks are limited to minor traffic delay.
-- Only declare "HIGH" or "CRITICAL" if verified disasters exist (gas leak, chemical fire, flood inundation).
 
 Strict Rule: Output valid JSON ONLY matching this structure:
 {
@@ -261,9 +266,60 @@ You receive the exact cascading risk analysis from Agent 2 and telemetry from Ag
 Your mission is to authorize an authoritative, calibrated response.
 
 CRITICAL DISPATCH RULES:
-- If threat_level is "ALL_CLEAR" (no harm detected in photo or text, normal parked vehicle, peaceful observation):
+- If threat_level is "CRITICAL" or "HIGH" (active fire, building fire, gas explosion, heavy flood):
+  • directive_title: "OPERATION SHIELD: CODE RED EMERGENCY DIRECTIVE"
+  • threat_level: "CRITICAL" (RED LIGHT STATUS - CRISIS RESPONSE)
+  • status: "DISPATCH_AUTHORIZED"
+  • three_step_dispatch_plan: [
+      {
+        "step": 1,
+        "title": "Phase 1: Rapid Fire Suppression & Rescue Deployment",
+        "units_dispatched": ["Engine Company 9", "Ladder Truck 3", "Battalion Chief"],
+        "action_orders": "Deploy heavy fire engines with aerial master streams to halt structure fire propagation and commence primary search & rescue."
+      },
+      {
+        "step": 2,
+        "title": "Phase 2: Medical Triage & Utility Isolation",
+        "units_dispatched": ["Metropolis Trauma EMS", "Municipal Gas & Power Isolation Squad"],
+        "action_orders": "Establish forward medical triage point; isolate electrical mains and gas valves to prevent secondary structural explosions."
+      },
+      {
+        "step": 3,
+        "title": "Phase 3: Civilian Evacuation & Sector Cordon",
+        "units_dispatched": ["Metropolis Police Tactical", "Civil Defense Evacuation Squad"],
+        "action_orders": "Evacuate adjacent buildings within 300-meter safety radius; enforce arterial lockdown for incoming emergency apparatus."
+      }
+    ]
+  • public_broadcast_alert: "EMERGENCY ADVISORY: Active structure fire reported. Avoid sector immediately. Clear all transit corridors for emergency apparatus."
+- If threat_level is "LOW" or "ROUTINE" or "MEDIUM" (bike skid, cyclist down, pedestrian slip, minor vehicle collision):
+  • directive_title: "LOCAL TRAFFIC & MEDICAL RESPONSE DIRECTIVE"
+  • threat_level: "LOW" (YELLOW LIGHT STATUS - ROUTINE LOCAL RESPONSE)
+  • status: "DISPATCH_AUTHORIZED"
+  • three_step_dispatch_plan: [
+      {
+        "step": 1,
+        "title": "Phase 1: Immediate Paramedic Triage",
+        "units_dispatched": ["EMS Ambulance Squad 4", "Rapid Response Paramedic"],
+        "action_orders": "Deploy local ambulance to provide on-scene stabilization and evaluate injuries."
+      },
+      {
+        "step": 2,
+        "title": "Phase 2: Traffic Safety & Lane Diversion",
+        "units_dispatched": ["Metropolis Traffic Patrol"],
+        "action_orders": "Establish temporary safety cordon around incident and divert oncoming traffic."
+      },
+      {
+        "step": 3,
+        "title": "Phase 3: Roadway Clearance & Log Archival",
+        "units_dispatched": ["Municipal Tow Unit", "Central Command Log Archive"],
+        "action_orders": "Clear roadway obstruction, verify lane re-opening, and log incident to municipal records."
+      }
+    ]
+  • public_broadcast_alert: "Minor traffic slowdown. Emergency services responding to local vehicle incident. No civilian evacuation required."
+- If threat_level is "ALL_CLEAR" (safe baseline, parked vehicle, peaceful observation):
   • directive_title: "ALL CLEAR: ROUTINE OBSERVATION DIRECTIVE"
   • threat_level: "ALL_CLEAR" (GREEN LIGHT STATUS - SAFE BASELINE)
+  • status: "ALL_CLEAR_VERIFIED"
   • three_step_dispatch_plan: [
       {
         "step": 1,
@@ -285,15 +341,6 @@ CRITICAL DISPATCH RULES:
       }
     ]
   • public_broadcast_alert: "All clear. Normal municipal operations active. No emergency response required."
-- If threat_level is "LOW" or "ROUTINE" (actual minor bike skid, cyclist down, pedestrian slip, minor vehicle collision):
-  • directive_title: "LOCAL TRAFFIC & MEDICAL RESPONSE DIRECTIVE"
-  • threat_level: "LOW" (YELLOW LIGHT STATUS - ROUTINE LOCAL RESPONSE)
-  • Units: EMS Ambulance Squad + Local Traffic Patrol (No Hazmat, no evacuations).
-  • public_broadcast_alert: "Minor traffic slowdown. Emergency services responding to local vehicle incident. No civilian evacuation required."
-- If threat_level is "HIGH" or "CRITICAL" (gas explosion, heavy flood, catastrophic disaster):
-  • directive_title: "OPERATION SHIELD: CODE RED DIRECTIVE"
-  • threat_level: "CRITICAL" (RED LIGHT STATUS - CRISIS RESPONSE)
-  • Deploy Hazmat, Fire Suppression, and Evacuation orders.
 
 Strict Rule: Output valid JSON ONLY matching this structure:
 {

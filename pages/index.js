@@ -391,7 +391,8 @@ export default function Dashboard() {
     e?.preventDefault();
     if (!chatInput.trim() || chatLoading) return;
 
-    const userMessage = { role: 'user', content: chatInput.trim() };
+    const userText = chatInput.trim();
+    const userMessage = { role: 'user', content: userText };
     const newHistory = [...chatMessages, userMessage];
     setChatMessages(newHistory);
     setChatInput('');
@@ -423,6 +424,24 @@ export default function Dashboard() {
         setActiveDossier(data.synthesizedIncident);
         setIncidentText(data.synthesizedIncident);
       }
+
+      // Automatically sync priority scenario & CCTV camera feed if detected from dialogue
+      const priority = data.suggestedPriority;
+      if (priority) {
+        setOpticalScenario(priority);
+        if (mediaSource === 'cctv') {
+          if (priority === 'critical') {
+            setActiveMedia(PRESET_SCENARIOS[2].cctvImage);
+            setActiveCameraLabel(PRESET_SCENARIOS[2].cctvId);
+          } else if (priority === 'minor') {
+            setActiveMedia(PRESET_SCENARIOS[1].cctvImage);
+            setActiveCameraLabel(PRESET_SCENARIOS[1].cctvId);
+          } else if (priority === 'safe') {
+            setActiveMedia(PRESET_SCENARIOS[0].cctvImage);
+            setActiveCameraLabel(PRESET_SCENARIOS[0].cctvId);
+          }
+        }
+      }
     } catch (err) {
       console.error(err);
       setChatMessages([
@@ -434,17 +453,36 @@ export default function Dashboard() {
     }
   };
 
-  const handleRunInvestigation = async (overrideIncidentText = null) => {
-    let textToInvestigate = (overrideIncidentText || chatInput || incidentText || activeDossier || '').trim();
+  const handleRunInvestigation = async (overrideIncidentText = null, overrideMedia = undefined, overrideCamera = undefined) => {
+    // Intelligent priority extraction for incident dispatch:
+    // 1. Explicit argument override
+    // 2. Active synthesized dossier
+    // 3. Most recent synthesized dossier in chat history
+    // 4. Most recent citizen/user message in chat (e.g. "fire accident to neighbour building")
+    // 5. Current chat input
+    // 6. Configured incident text
+    let textToInvestigate = (
+      overrideIncidentText || 
+      activeDossier || 
+      chatMessages.slice().reverse().find(m => m.dossier)?.dossier || 
+      (chatMessages.slice().reverse().find(m => m.role === 'user')?.content ? `Citizen Incident Report: ${chatMessages.slice().reverse().find(m => m.role === 'user')?.content}` : null) ||
+      chatInput.trim() || 
+      incidentText || 
+      ''
+    ).trim();
+
     if (!textToInvestigate) {
       if (opticalScenario === 'safe') {
-        textToInvestigate = `Field optical evidence submitted (${activeCameraLabel}). Stationary parked vehicle / harmless scene observed. Zero collisions, zero casualties, zero fire/leak hazard. Authorize All Clear green-light status.`;
+        textToInvestigate = `Field optical surveillance confirms safe municipal baseline. Harmless stationary vehicle parked peacefully with zero collisions, zero injuries, zero structural damage, and no active hazards. Confirm safe green-light status.`;
       } else if (opticalScenario === 'critical') {
-        textToInvestigate = `Field optical evidence submitted (${activeCameraLabel}). Severe emergency observed: heavy smoke, fire, or catastrophic hazard. Dispatch multi-unit Hazmat and Fire suppression.`;
+        textToInvestigate = `Critical urban crisis: active structural fire / major emergency reported. Immediate multi-unit Fire Suppression, Hazmat, and EMS rescue required.`;
       } else {
-        textToInvestigate = `Field optical evidence submitted (${activeCameraLabel}). Local vehicle incident documented on roadway. Deploy local EMS and traffic unit.`;
+        textToInvestigate = `Local vehicle incident: cyclist down on roadway after collision with vehicle. Deploy routine EMS and local traffic patrol.`;
       }
     }
+
+    const mediaToUse = overrideMedia !== undefined ? overrideMedia : activeMedia;
+    const cameraToUse = overrideCamera !== undefined ? overrideCamera : activeCameraLabel;
 
     setLoading(true);
     setError(null);
@@ -460,9 +498,9 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           incident: textToInvestigate,
-          cameraSource: activeCameraLabel,
-          mediaEvidence: activeMedia ? true : false,
-          imagePayload: activeMedia || null,
+          cameraSource: cameraToUse,
+          mediaEvidence: mediaToUse ? true : false,
+          imagePayload: mediaToUse || null,
         }),
       });
 
@@ -940,38 +978,67 @@ export default function Dashboard() {
               </div>
 
               {/* Ready Incident Dossier Card */}
-              {activeDossier && (
-                <div className="p-3.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/80 text-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Synthesized Solution Dossier
-                    </span>
-                    <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400">Ready for Dispatch</span>
+              {activeDossier && (() => {
+                const isCrit = opticalScenario === 'critical' || /fire|blaze|burn|explosion|gas|leak|flood|critical|hazard|trapped|smoke/i.test(activeDossier);
+                const isMin = !isCrit && (opticalScenario === 'minor' || /accident|collision|skid|injured|cyclist|pedestrian|hurt|fall/i.test(activeDossier));
+
+                const cardBg = isCrit 
+                  ? 'bg-red-50/90 dark:bg-red-950/40 border-red-300 dark:border-red-800/80' 
+                  : isMin 
+                  ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800/80' 
+                  : 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800/80';
+
+                const badgeColor = isCrit 
+                  ? 'text-red-700 dark:text-red-300' 
+                  : isMin 
+                  ? 'text-amber-700 dark:text-amber-300' 
+                  : 'text-emerald-700 dark:text-emerald-300';
+
+                const btnBg = isCrit 
+                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                  : isMin 
+                  ? 'bg-amber-600 hover:bg-amber-700 text-white' 
+                  : 'bg-emerald-700 hover:bg-emerald-800 text-white';
+
+                const badgeLabel = isCrit 
+                  ? '🔴 CODE RED EMERGENCY DOSSIER READY' 
+                  : isMin 
+                  ? '🟡 LOCAL INCIDENT RESPONSE DOSSIER' 
+                  : '🟢 ALL CLEAR BASELINE DOSSIER';
+
+                return (
+                  <div className={`p-3.5 rounded-xl border text-xs space-y-2 ${cardBg}`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${badgeColor}`}>
+                        <CheckCircle2 className="w-3.5 h-3.5" /> {badgeLabel}
+                      </span>
+                      <span className={`text-[10px] font-mono font-bold ${badgeColor}`}>Ready for Dispatch</span>
+                    </div>
+                    <p className="text-slate-900 dark:text-slate-100 italic leading-relaxed text-xs">
+                      &ldquo;{activeDossier}&rdquo;
+                    </p>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleRunInvestigation(activeDossier)}
+                        disabled={loading}
+                        className={`flex-1 py-2 px-3 rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm transition disabled:opacity-40 cursor-pointer ${btnBg}`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                        <span>Authorize & Deploy Multi-Agent Emergency Cascade</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => chatInputRef.current?.focus()}
+                        className="py-2 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Send to AI (Refine)</span>
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-emerald-950 dark:text-emerald-100 italic leading-relaxed text-xs">
-                    &ldquo;{activeDossier}&rdquo;
-                  </p>
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => handleRunInvestigation(activeDossier)}
-                      disabled={loading}
-                      className="flex-1 py-2 px-3 rounded-lg bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm transition disabled:opacity-40 cursor-pointer"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-                      <span>Authorize & Deploy Multi-Agent Emergency Cascade</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => chatInputRef.current?.focus()}
-                      className="py-2 px-3 rounded-lg bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 hover:bg-emerald-100/60 dark:hover:bg-slate-800 font-semibold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Send to AI (Refine)</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* User Incident Priority & Scenario Controls */}
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2">
@@ -995,10 +1062,11 @@ export default function Dashboard() {
                     type="button"
                     onClick={() => {
                       setOpticalScenario('safe');
-                      const text = "Optical surveillance confirms safe municipal baseline. Harmless stationary vehicle/scene observed. Zero collisions, zero casualties, zero hazards. Authorize All Clear green status.";
-                      if (!chatInput.trim() || chatInput.includes('incident') || chatInput.includes('crisis') || chatInput.includes('safe')) {
-                        setChatInput(text);
+                      if (mediaSource === 'cctv') {
+                        setActiveMedia(PRESET_SCENARIOS[0].cctvImage);
+                        setActiveCameraLabel(PRESET_SCENARIOS[0].cctvId);
                       }
+                      const text = PRESET_SCENARIOS[0].text;
                       setIncidentText(text);
                       setActiveDossier(text);
                     }}
@@ -1015,10 +1083,11 @@ export default function Dashboard() {
                     type="button"
                     onClick={() => {
                       setOpticalScenario('minor');
-                      const text = "Local vehicle incident: cyclist down on roadway after collision with vehicle. Roadway obstruction confirmed. Deploy routine EMS and local traffic patrol.";
-                      if (!chatInput.trim() || chatInput.includes('incident') || chatInput.includes('crisis') || chatInput.includes('safe')) {
-                        setChatInput(text);
+                      if (mediaSource === 'cctv') {
+                        setActiveMedia(PRESET_SCENARIOS[1].cctvImage);
+                        setActiveCameraLabel(PRESET_SCENARIOS[1].cctvId);
                       }
+                      const text = PRESET_SCENARIOS[1].text;
                       setIncidentText(text);
                       setActiveDossier(text);
                     }}
@@ -1035,10 +1104,11 @@ export default function Dashboard() {
                     type="button"
                     onClick={() => {
                       setOpticalScenario('critical');
-                      const text = "Critical urban crisis: active gas leak, heavy fire, or structural threat. Immediate multi-unit Hazmat, heavy suppression, and evacuation required.";
-                      if (!chatInput.trim() || chatInput.includes('incident') || chatInput.includes('crisis') || chatInput.includes('safe')) {
-                        setChatInput(text);
+                      if (mediaSource === 'cctv') {
+                        setActiveMedia(PRESET_SCENARIOS[2].cctvImage);
+                        setActiveCameraLabel(PRESET_SCENARIOS[2].cctvId);
                       }
+                      const text = PRESET_SCENARIOS[2].text;
                       setIncidentText(text);
                       setActiveDossier(text);
                     }}
@@ -1060,7 +1130,7 @@ export default function Dashboard() {
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Describe incident or refine with AI (e.g. 'cyclist collision on 5th Ave', 'send EMS')..."
+                  placeholder="Describe incident or refine with AI (e.g. 'fire accident to neighbour building', 'send EMS')..."
                   className="flex-1 text-xs rounded-xl px-3 py-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-blue-500/40"
                 />
                 <button
@@ -1078,11 +1148,19 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => {
-                  const textToSend = activeDossier || chatInput || chatMessages.slice().reverse().find(m => m.dossier)?.dossier || chatMessages[chatMessages.length - 1]?.content || incidentText;
+                  const latestDossier = activeDossier || chatMessages.slice().reverse().find(m => m.dossier)?.dossier;
+                  const latestUserMsg = chatMessages.slice().reverse().find(m => m.role === 'user')?.content;
+                  const textToSend = latestDossier || (latestUserMsg ? `Citizen Emergency Report: ${latestUserMsg}` : '') || chatInput.trim() || incidentText;
                   handleRunInvestigation(textToSend);
                 }}
                 disabled={loading}
-                className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className={`w-full py-3 px-4 rounded-xl text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
+                  opticalScenario === 'critical' 
+                    ? 'bg-red-600 hover:bg-red-700' 
+                    : opticalScenario === 'minor' 
+                    ? 'bg-amber-600 hover:bg-amber-700' 
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
               >
                 {loading ? (
                   <>
@@ -1348,9 +1426,12 @@ export default function Dashboard() {
                       type="button"
                       onClick={() => {
                         setOpticalScenario('safe');
+                        setActiveMedia(PRESET_SCENARIOS[0].cctvImage);
+                        setActiveCameraLabel(PRESET_SCENARIOS[0].cctvId);
                         const text = PRESET_SCENARIOS[0].text;
                         setIncidentText(text);
-                        handleRunInvestigation(text);
+                        setActiveDossier(text);
+                        handleRunInvestigation(text, PRESET_SCENARIOS[0].cctvImage, PRESET_SCENARIOS[0].cctvId);
                       }}
                       className="w-full py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] flex items-center justify-center gap-1 transition shadow-xs cursor-pointer"
                     >
@@ -1374,9 +1455,12 @@ export default function Dashboard() {
                       type="button"
                       onClick={() => {
                         setOpticalScenario('minor');
+                        setActiveMedia(PRESET_SCENARIOS[1].cctvImage);
+                        setActiveCameraLabel(PRESET_SCENARIOS[1].cctvId);
                         const text = PRESET_SCENARIOS[1].text;
                         setIncidentText(text);
-                        handleRunInvestigation(text);
+                        setActiveDossier(text);
+                        handleRunInvestigation(text, PRESET_SCENARIOS[1].cctvImage, PRESET_SCENARIOS[1].cctvId);
                       }}
                       className="w-full py-1.5 px-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-[11px] flex items-center justify-center gap-1 transition shadow-xs cursor-pointer"
                     >
@@ -1400,9 +1484,12 @@ export default function Dashboard() {
                       type="button"
                       onClick={() => {
                         setOpticalScenario('critical');
+                        setActiveMedia(PRESET_SCENARIOS[2].cctvImage);
+                        setActiveCameraLabel(PRESET_SCENARIOS[2].cctvId);
                         const text = PRESET_SCENARIOS[2].text;
                         setIncidentText(text);
-                        handleRunInvestigation(text);
+                        setActiveDossier(text);
+                        handleRunInvestigation(text, PRESET_SCENARIOS[2].cctvImage, PRESET_SCENARIOS[2].cctvId);
                       }}
                       className="w-full py-1.5 px-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-[11px] flex items-center justify-center gap-1 transition shadow-xs cursor-pointer"
                     >
