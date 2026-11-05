@@ -21,38 +21,89 @@ function cleanAndParseJSON(rawText) {
   }
 }
 
-// Lightweight Raw API Call to Groq (or compatible OpenAI format)
+// Resilient Multi-Model Groq Dispatch with Auto-Retry & Failover Pool
 async function callLLM({ systemPrompt, userPrompt, jsonMode = true }) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     throw new Error('GROQ_API_KEY is missing in environment variables.');
   }
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'openai/gpt-oss-120b',
-      temperature: 0.2,
-      response_format: jsonMode ? { type: 'json_object' } : undefined,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-    }),
-  });
+  // Model pool: Primary high-parameter LLM with instant failovers to separate TPM quotas
+  const modelPool = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b'];
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Groq API error (${response.status}): ${errorBody}`);
+  for (let i = 0; i < modelPool.length; i++) {
+    const currentModel = modelPool[i];
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: currentModel,
+          temperature: 0.2,
+          response_format: jsonMode ? { type: 'json_object' } : undefined,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+        }),
+      });
+
+      // Handle 429 Rate Limit seamlessly by failing over to the next model in pool
+      if (response.status === 429) {
+        console.warn(`Groq 429 Rate Limit hit on model ${currentModel}. Auto-switching to next model in pool...`);
+        if (i < modelPool.length - 1) {
+          continue; // Seamlessly try qwen/qwen3.8-27b or openai/gpt-oss-20b
+        } else {
+          // If all pool models were rate limited, backoff 3.2s and retry
+          console.warn('All models rate limited. Waiting 3.2s cooldown backoff...');
+          await new Promise(r => setTimeout(r, 3200));
+          const retryRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model: 'qwen/qwen3.8-27b',
+              temperature: 0.2,
+              response_format: jsonMode ? { type: 'json_object' } : undefined,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt },
+              ],
+            }),
+          });
+          if (retryRes.ok) {
+            const data = await retryRes.json();
+            const content = data.choices[0]?.message?.content || '{}';
+            return jsonMode ? cleanAndParseJSON(content) : content;
+          }
+        }
+      }
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        if (i < modelPool.length - 1) {
+          console.warn(`Error on ${currentModel} (${response.status}), switching model:`, errorBody);
+          continue;
+        }
+        throw new Error(`Groq API error (${response.status}): ${errorBody}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0]?.message?.content || '{}';
+      return jsonMode ? cleanAndParseJSON(content) : content;
+    } catch (err) {
+      if (i < modelPool.length - 1) {
+        console.warn(`Attempt on ${currentModel} failed, trying ${modelPool[i + 1]}:`, err.message);
+        continue;
+      }
+      throw err;
+    }
   }
-
-  const data = await response.json();
-  const content = data.choices[0]?.message?.content || '{}';
-  return jsonMode ? cleanAndParseJSON(content) : content;
 }
 
 export default async function handler(req, res) {

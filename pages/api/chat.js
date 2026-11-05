@@ -49,26 +49,44 @@ YOUR OBJECTIVES:
       }))
     ];
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'openai/gpt-oss-120b',
-        temperature: 0.4,
-        messages: formattedMessages,
-      }),
-    });
+    const modelPool = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b'];
+    let replyContent = 'Understood. Please provide more details.';
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Groq API error (${response.status}): ${errText}`);
+    for (let i = 0; i < modelPool.length; i++) {
+      const currentModel = modelPool[i];
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: currentModel,
+            temperature: 0.4,
+            messages: formattedMessages,
+          }),
+        });
+
+        if (response.status === 429 && i < modelPool.length - 1) {
+          console.warn(`Chat operator 429 on ${currentModel}. Switching to ${modelPool[i + 1]}...`);
+          continue;
+        }
+
+        if (!response.ok) {
+          const errText = await response.text();
+          if (i < modelPool.length - 1) continue;
+          throw new Error(`Groq API error (${response.status}): ${errText}`);
+        }
+
+        const data = await response.json();
+        replyContent = data.choices[0]?.message?.content || replyContent;
+        break;
+      } catch (err) {
+        if (i < modelPool.length - 1) continue;
+        throw err;
+      }
     }
-
-    const data = await response.json();
-    const replyContent = data.choices[0]?.message?.content || 'Understood. Please provide more details.';
 
     // Check if an incident dossier was generated
     const dossierMatch = replyContent.match(/\[INCIDENT DOSSIER READY:\s*"([^"]+)"\]/i);

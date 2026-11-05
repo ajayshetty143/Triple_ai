@@ -943,11 +943,23 @@ export default function Dashboard() {
           </div>
 
           {error && (
-            <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 shrink-0 text-red-500 mt-0.5" />
+            <div className={`p-4 rounded-2xl border text-xs flex items-start gap-3 ${
+              error.includes('429') || error.toLowerCase().includes('rate limit')
+                ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200'
+                : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+            }`}>
+              <AlertTriangle className="w-5 h-5 shrink-0 text-amber-500 mt-0.5" />
               <div>
-                <p className="font-semibold">Pipeline Execution Alert</p>
-                <p className="mt-0.5 opacity-90">{error}</p>
+                <p className="font-semibold">
+                  {error.includes('429') || error.toLowerCase().includes('rate limit')
+                    ? 'AI Rate Limit Cooldown Active (Free Tier)'
+                    : 'Pipeline Execution Alert'}
+                </p>
+                <p className="mt-0.5 opacity-90">
+                  {error.includes('429') || error.toLowerCase().includes('rate limit')
+                    ? 'Groq free tier enforces an 8,000 token-per-minute window. Please wait 3 seconds and click dispatch again — the multi-model failover pool will handle your request immediately.'
+                    : error}
+                </p>
               </div>
             </div>
           )}
