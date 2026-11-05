@@ -21,15 +21,24 @@ function cleanAndParseJSON(rawText) {
   }
 }
 
-// Resilient Multi-Model Groq Dispatch with Auto-Retry & Failover Pool
-async function callLLM({ systemPrompt, userPrompt, jsonMode = true }) {
+// Resilient Multi-Model Groq Dispatch with Vision & Failover Pool
+async function callLLM({ systemPrompt, userPrompt, jsonMode = true, imageUrl = null }) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     throw new Error('GROQ_API_KEY is missing in environment variables.');
   }
 
-  // Model pool: Primary high-parameter LLM with instant failovers to separate TPM quotas
-  const modelPool = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b'];
+  // If an image is attached, prioritize the multimodal vision model qwen/qwen3.8-27b
+  const modelPool = imageUrl 
+    ? ['qwen/qwen3.8-27b'] 
+    : ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b'];
+
+  const userMessageContent = imageUrl
+    ? [
+        { type: 'text', text: userPrompt },
+        { type: 'image_url', image_url: { url: imageUrl } },
+      ]
+    : userPrompt;
 
   for (let i = 0; i < modelPool.length; i++) {
     const currentModel = modelPool[i];
@@ -42,11 +51,11 @@ async function callLLM({ systemPrompt, userPrompt, jsonMode = true }) {
         },
         body: JSON.stringify({
           model: currentModel,
-          temperature: 0.2,
+          temperature: 0.1,
           response_format: jsonMode ? { type: 'json_object' } : undefined,
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
+            { role: 'user', content: userMessageContent },
           ],
         }),
       });
@@ -55,9 +64,8 @@ async function callLLM({ systemPrompt, userPrompt, jsonMode = true }) {
       if (response.status === 429) {
         console.warn(`Groq 429 Rate Limit hit on model ${currentModel}. Auto-switching to next model in pool...`);
         if (i < modelPool.length - 1) {
-          continue; // Seamlessly try qwen/qwen3.8-27b or openai/gpt-oss-20b
+          continue; // Seamlessly try next model
         } else {
-          // If all pool models were rate limited, backoff 3.2s and retry
           console.warn('All models rate limited. Waiting 3.2s cooldown backoff...');
           await new Promise(r => setTimeout(r, 3200));
           const retryRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -68,11 +76,11 @@ async function callLLM({ systemPrompt, userPrompt, jsonMode = true }) {
             },
             body: JSON.stringify({
               model: 'qwen/qwen3.8-27b',
-              temperature: 0.2,
+              temperature: 0.1,
               response_format: jsonMode ? { type: 'json_object' } : undefined,
               messages: [
                 { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt },
+                { role: 'user', content: userMessageContent },
               ],
             }),
           });
@@ -135,26 +143,28 @@ export default async function handler(req, res) {
     }
 
     // ==========================================
-    // STEP 1: AGENT 1 - Data Gatherer & Telemetry Specialist
+    // STEP 1: AGENT 1 - Data Gatherer & Optical Intelligence Specialist
     // ==========================================
     const agent1SystemPrompt = `You are Agent 1 (Data Gatherer & Optical Intelligence Specialist) in an autonomous city emergency command system.
-Your job is to critically evaluate the incident report, attached image/video evidence, and database sensors.
+Your job is to critically evaluate the attached optical image evidence (if provided), the incident report, and database sensors.
 
 CRITICAL FIRST QUESTION: IS THERE ANY ACTUAL HARM, HAZARD, OR EMERGENCY PRESENT?
-- If the uploaded image or camera snapshot shows a normal object, a parked vehicle/motorcycle (e.g. a Royal Enfield motorcycle with no crash damage), an empty street, a pedestrian walking normally, or if the report indicates no emergency or baseline verification:
-  • You MUST classify this incident as "ALL_CLEAR_SAFE".
-  • is_harm_detected MUST be false.
-  • State clearly in visual_surveillance_analysis: "Visual inspection confirms a safe, normal scene with NO collision, NO fire, NO spill, NO injuries, and NO structural damage."
-  • critical_sensors MUST be empty ([]).
-- If the incident is a genuine minor event (e.g. bike skid, scraped knee, stalled car):
-  • Classify as "ROUTINE_LOCAL".
-  • is_harm_detected MUST be true.
-  • critical_sensors MUST be empty ([]).
-- Only classify as "SEVERE" or "CATASTROPHIC" if an actual hazardous crisis is reported (gas explosion, heavy flood, substation fire).
+- Examine the attached visual image directly (if provided) and the incident report:
+  • If the image shows an active collision, a fallen cyclist or pedestrian lying on the asphalt, an injured person, or a vehicle accident:
+    - You MUST mark is_harm_detected as true.
+    - You MUST classify this incident as "ROUTINE_LOCAL".
+    - Describe the exact scene in visual_surveillance_analysis (e.g. "Visual inspection confirms a cyclist lying on the road next to a fallen bicycle and vehicle. Collision and casualty detected.").
+    - critical_sensors MUST be empty ([]).
+  • If the image shows a normal peaceful scene, a parked vehicle/motorcycle with no crash damage, an empty street, or normal pedestrian:
+    - You MUST mark is_harm_detected as false.
+    - You MUST classify this incident as "ALL_CLEAR_SAFE".
+    - State clearly in visual_surveillance_analysis: "Visual inspection confirms a safe, normal scene with NO collision, NO fire, NO spill, NO injuries, and NO structural damage."
+    - critical_sensors MUST be empty ([]).
+  • Only classify as "SEVERE" or "CATASTROPHIC" if an actual hazardous crisis is reported (gas explosion, heavy flood, substation fire).
 
 CRITICAL SENSOR DECOUPLING RULE:
 - The database contains background sensors (e.g. SENS-GAS-07 gas pipeline, SENS-FLOOD-01 flood gauge) which are remote citywide monitors.
-- DO NOT correlate gas or flood sensors with a vehicle, motorcycle, or street observation unless the report explicitly states a gas explosion, fire, or flood!
+- DO NOT correlate gas or flood sensors with a vehicle, motorcycle, cyclist, or street observation unless the report explicitly states a gas explosion, fire, or flood!
 - If the report or visual feed is about a motorcycle, bicycle, parked vehicle, normal street, or safe baseline:
   • All background gas/flood sensors are UNRELATED.
   • critical_sensors MUST be empty ([]).
@@ -177,7 +187,7 @@ Strict Rule: Output valid JSON ONLY matching this structure:
     const visualContext = mediaEvidence 
       ? `VISUAL EVIDENCE / SURVEILLANCE FEED:
 Source Label: "${cameraSource || 'Live Stream / Citizen Upload'}"
-Optical File Status: Evidence visual payload attached to dispatch dossier. Cross-reference this optical evidence (e.g. vehicle type, motorcycle, water depth, debris, or fire visible) with the incident and nearby sensors.`
+Optical File Status: Attached visual payload provided. Cross-reference this optical evidence directly.`
       : `VISUAL EVIDENCE: No live optical feed attached. Relying on reported telemetry.`;
 
     const agent1UserPrompt = `CITIZEN INCIDENT REPORT:
@@ -188,12 +198,17 @@ ${visualContext}
 LIVE CITY SENSOR TELEMETRY FROM SUPABASE:
 ${JSON.stringify(sensors, null, 2)}
 
-Provide your structured JSON data summary now.`;
+Inspect the optical evidence and provide your structured JSON data summary now.`;
+
+    const validImageUrl = imagePayload && typeof imagePayload === 'string' && (imagePayload.startsWith('data:image/') || imagePayload.startsWith('http')) 
+      ? imagePayload 
+      : null;
 
     const agent1Output = await callLLM({
       systemPrompt: agent1SystemPrompt,
       userPrompt: agent1UserPrompt,
       jsonMode: true,
+      imageUrl: validImageUrl,
     });
 
     // ==========================================

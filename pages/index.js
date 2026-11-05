@@ -129,6 +129,8 @@ export default function Dashboard() {
   const [isVideoMedia, setIsVideoMedia] = useState(false);
   const [isWebcamActive, setIsWebcamActive] = useState(false);
   const [clockTime, setClockTime] = useState('');
+  const [visionAnalysis, setVisionAnalysis] = useState(null);
+  const [isAnalyzingVision, setIsAnalyzingVision] = useState(false);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -179,6 +181,39 @@ export default function Dashboard() {
     }
   };
 
+  const runVisionAnalysis = async (dataUrl, label) => {
+    setIsAnalyzingVision(true);
+    setVisionAnalysis(null);
+    try {
+      const res = await fetch('/api/analyze-vision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imagePayload: dataUrl, fileName: label })
+      });
+      const data = await res.json();
+      if (data.success && data.analysis) {
+        const ana = data.analysis;
+        setVisionAnalysis(ana);
+        if (ana.harm_detected) {
+          if (ana.severity === 'CRITICAL') {
+            setOpticalScenario('critical');
+          } else {
+            setOpticalScenario('minor');
+          }
+        } else {
+          setOpticalScenario('safe');
+        }
+        if (ana.suggested_incident_text || ana.scene_description) {
+          setIncidentText(ana.suggested_incident_text || `Field visual evidence (${label}): ${ana.scene_description}`);
+        }
+      }
+    } catch (err) {
+      console.warn("Vision analysis error:", err);
+    } finally {
+      setIsAnalyzingVision(false);
+    }
+  };
+
   const captureWebcamSnapshot = () => {
     if (!videoRef.current) return;
     const canvas = document.createElement('canvas');
@@ -193,8 +228,8 @@ export default function Dashboard() {
     setMediaSource('upload');
     const label = "CAPTURED EVIDENCE // LOCAL TERMINAL";
     setActiveCameraLabel(label);
-    setOpticalScenario('safe');
-    setIncidentText("Live camera snapshot captured. Stationary normal scene documented with zero collisions, zero injuries, zero hazards. Authorize All Clear green-light baseline.");
+    setIncidentText("Scanning camera snapshot with Multimodal Optical AI...");
+    runVisionAnalysis(dataUrl, label);
   };
 
   const stopWebcam = () => {
@@ -215,12 +250,15 @@ export default function Dashboard() {
     setMediaSource('upload');
     const label = `EVIDENCE FILE: ${file.name}`;
     setActiveCameraLabel(label);
-    setOpticalScenario('safe');
-    setIncidentText(`Field optical evidence submitted (${file.name}). Stationary parked vehicle / harmless street scene observed. Zero collisions, zero casualties, zero fire/leak hazard. Authorize All Clear green-light status.`);
+    setIncidentText(`Scanning uploaded media (${file.name}) with Multimodal Optical AI...`);
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      setActiveMedia(event.target.result);
+      const dataUrl = event.target.result;
+      setActiveMedia(dataUrl);
+      if (!isVideo) {
+        runVisionAnalysis(dataUrl, file.name);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -505,6 +543,53 @@ export default function Dashboard() {
                   Scenario Triage
                 </span>
               </div>
+
+              {/* AI Multimodal Vision Analysis Status & Findings */}
+              {isAnalyzingVision && (
+                <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 flex items-center gap-2.5 text-xs text-blue-800 dark:text-blue-300 animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span className="font-semibold">AI Multimodal Vision Inspecting Pixels... Detecting objects, casualties & safety baseline</span>
+                </div>
+              )}
+
+              {visionAnalysis && !isAnalyzingVision && (
+                <div className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 transition ${
+                  visionAnalysis.harm_detected 
+                    ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800/80 text-amber-950 dark:text-amber-200' 
+                    : 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800/80 text-emerald-950 dark:text-emerald-200'
+                }`}>
+                  {visionAnalysis.harm_detected ? (
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold uppercase tracking-wider text-[10px]">
+                        {visionAnalysis.harm_detected ? '⚠️ AI Optical Vision: Incident / Casualty Detected' : '🟢 AI Optical Vision: Safe Baseline Verified'}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                        visionAnalysis.harm_detected ? 'bg-amber-600 text-white' : 'bg-emerald-600 text-white'
+                      }`}>
+                        {visionAnalysis.severity || (visionAnalysis.harm_detected ? 'INCIDENT' : 'ALL_CLEAR')}
+                      </span>
+                    </div>
+                    <p className="leading-relaxed text-slate-800 dark:text-slate-200">
+                      {visionAnalysis.scene_description}
+                    </p>
+                    {visionAnalysis.recommended_units?.length > 0 && (
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        <span className="text-[10px] font-semibold text-slate-500 uppercase">Recommended Units:</span>
+                        {visionAnalysis.recommended_units.map((u, i) => (
+                          <span key={i} className="px-2 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-[10px] font-medium text-slate-800 dark:text-slate-200">
+                            {u}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* 3 Scenario Mode Pills */}
               <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-950/60 rounded-xl">
