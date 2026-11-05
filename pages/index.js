@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { 
   AlertTriangle, 
   ShieldAlert, 
@@ -35,6 +36,8 @@ import {
   FileText,
   Sliders,
   ArrowUpRight,
+  LogIn,
+  LogOut,
   Image as ImageIcon
 } from 'lucide-react';
 
@@ -92,7 +95,29 @@ const PRESET_SCENARIOS = [
 ];
 
 export default function Dashboard() {
+  const router = useRouter();
   const [isDark, setIsDark] = useState(true);
+  const [operatorSession, setOperatorSession] = useState(null);
+
+  useEffect(() => {
+    try {
+      const email = localStorage.getItem('smartcity_user_email');
+      const name = localStorage.getItem('smartcity_operator_name');
+      if (email || name) {
+        setOperatorSession(name || email.split('@')[0]);
+      }
+    } catch (e) {}
+  }, []);
+
+  const handleSignOut = () => {
+    try {
+      localStorage.removeItem('smartcity_auth_token');
+      localStorage.removeItem('smartcity_user_email');
+      localStorage.removeItem('smartcity_operator_name');
+    } catch (e) {}
+    setOperatorSession(null);
+    router.push('/login');
+  };
 
   useEffect(() => {
     if (isDark) {
@@ -479,6 +504,34 @@ export default function Dashboard() {
             >
               {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
             </button>
+
+            {/* Operator Session & Gateway Toggle */}
+            {operatorSession ? (
+              <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs shadow-xs">
+                  <User className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="font-semibold max-w-[130px] truncate">{operatorSession}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-950/40 text-slate-500 hover:text-red-600 transition shadow-xs"
+                  title="Sign Out to Smart City Gateway"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => router.push('/login')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+                title="Connect to Metropolis Gateway"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Gateway Login</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
