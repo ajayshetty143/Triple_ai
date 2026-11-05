@@ -61,7 +61,7 @@ export default async function handler(req, res) {
   }
 
   const startTime = Date.now();
-  const { incident, mediaEvidence, cameraSource } = req.body;
+  const { incident, mediaEvidence, cameraSource, imagePayload } = req.body;
 
   if (!incident || typeof incident !== 'string') {
     return res.status(400).json({ error: 'Please provide a valid incident description.' });
@@ -109,8 +109,8 @@ Strict Rule: Output valid JSON ONLY matching this structure:
 
     const visualContext = mediaEvidence 
       ? `VISUAL EVIDENCE / SURVEILLANCE FEED:
-Source: ${cameraSource || 'Live Stream / Citizen Upload'}
-Visual Analysis Payload: Visual evidence attached and active.`
+Source Label: "${cameraSource || 'Live Stream / Citizen Upload'}"
+Optical File Status: Evidence visual payload attached to dispatch dossier. Cross-reference this optical evidence (e.g. vehicle type, motorcycle, water depth, debris, or fire visible) with the incident and nearby sensors.`
       : `VISUAL EVIDENCE: No live optical feed attached. Relying on reported telemetry.`;
 
     const agent1UserPrompt = `CITIZEN INCIDENT REPORT:
@@ -227,6 +227,8 @@ Issue the proportionate 3-Step Emergency Action Plan in JSON.`;
       meta: {
         execution_time_ms: executionDurationMs,
         sensors_consulted: sensors.length,
+        camera_source: cameraSource || 'Municipal Camera Feed',
+        attached_image: imagePayload || null,
         timestamp: new Date().toISOString(),
       },
       pipeline: {

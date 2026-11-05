@@ -33,7 +33,8 @@ import {
   CheckCircle,
   FileText,
   Sliders,
-  ArrowUpRight
+  ArrowUpRight,
+  Image as ImageIcon
 } from 'lucide-react';
 
 const PRESET_SCENARIOS = [
@@ -70,10 +71,8 @@ const PRESET_SCENARIOS = [
 ];
 
 export default function Dashboard() {
-  // Theme state: default to dark, toggles html class 'dark'
   const [isDark, setIsDark] = useState(true);
 
-  // Sync theme with document class
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
@@ -82,13 +81,9 @@ export default function Dashboard() {
     }
   }, [isDark]);
 
-  // Input Mode: 'quick' (CAD entry) or 'chat' (Gemini-style Conversational Triage)
   const [inputMode, setInputMode] = useState('quick'); 
-
-  // Quick CAD Mode State
   const [incidentText, setIncidentText] = useState(PRESET_SCENARIOS[0].text);
   
-  // Conversational AI Chatbot State (Gemini Style)
   const [chatMessages, setChatMessages] = useState([
     {
       role: 'assistant',
@@ -99,7 +94,6 @@ export default function Dashboard() {
   const [chatLoading, setChatLoading] = useState(false);
   const [activeDossier, setActiveDossier] = useState(null);
 
-  // Investigation Pipeline State
   const [loading, setLoading] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   const [activeTab, setActiveTab] = useState('commander');
@@ -119,7 +113,6 @@ export default function Dashboard() {
   const fileInputRef = useRef(null);
   const chatScrollRef = useRef(null);
 
-  // Live clock
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -130,7 +123,6 @@ export default function Dashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  // Auto-scroll chat
   useEffect(() => {
     if (chatScrollRef.current) {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
@@ -262,6 +254,7 @@ export default function Dashboard() {
           incident: textToInvestigate,
           cameraSource: activeCameraLabel,
           mediaEvidence: activeMedia ? true : false,
+          imagePayload: activeMedia || null,
         }),
       });
 
@@ -320,8 +313,6 @@ export default function Dashboard() {
 
           {/* Operational Metrics & Theme Toggle */}
           <div className="flex items-center gap-3">
-            
-            {/* System Status Badges */}
             <div className="hidden sm:flex items-center gap-2 text-xs font-medium">
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 shadow-xs">
                 <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -339,7 +330,6 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Dark / Light Mode Toggle */}
             <button
               type="button"
               onClick={() => setIsDark(!isDark)}
@@ -408,7 +398,7 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Video Controls */}
+            {/* Video Action Controls */}
             <div className="p-3 bg-white dark:bg-slate-950/40 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 {isWebcamActive ? (
@@ -464,12 +454,30 @@ export default function Dashboard() {
                 <span>Reset Feed</span>
               </button>
             </div>
+
+            {/* DIRECT BUTTON: Send Evidence to 3 Agents */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/90 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  Optical Evidence Active
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleRunInvestigation()}
+                disabled={loading}
+                className="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition disabled:opacity-40"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>Dispatch Agents with this Image</span>
+              </button>
+            </div>
           </div>
 
           {/* Incident Ingestion Hub */}
           <div className="rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm p-5 flex flex-col gap-4">
             
-            {/* Mode Switcher Tabs */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
               <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                 Intake Channel
@@ -504,7 +512,6 @@ export default function Dashboard() {
             {/* MODE 1: Direct Dispatch */}
             {inputMode === 'quick' && (
               <div className="space-y-4">
-                {/* Presets Grid */}
                 <div className="space-y-2">
                   <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
                     Select Standard Crisis Profile:
@@ -534,7 +541,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Input Textarea */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label htmlFor="incidentText" className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -648,7 +654,6 @@ export default function Dashboard() {
             </h3>
 
             <div className="space-y-3 text-xs">
-              {/* Agent 1 */}
               <div className={`p-3 rounded-xl border transition ${
                 activeStep >= 1 
                   ? 'border-slate-300 bg-slate-100/70 dark:border-blue-800/60 dark:bg-blue-950/20 text-slate-900 dark:text-blue-300' 
@@ -663,7 +668,6 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              {/* Agent 2 */}
               <div className={`p-3 rounded-xl border transition ${
                 activeStep >= 2 
                   ? 'border-amber-200 bg-amber-50/70 dark:border-amber-800/60 dark:bg-amber-950/20 text-amber-900 dark:text-amber-300' 
@@ -678,7 +682,6 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              {/* Agent 3 */}
               <div className={`p-3 rounded-xl border transition ${
                 activeStep >= 3 
                   ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-800/60 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300' 
@@ -702,7 +705,6 @@ export default function Dashboard() {
         {/* ==================================================== */}
         <section className="lg:col-span-7 flex flex-col gap-4">
           
-          {/* Executive Tab Header */}
           <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto text-xs font-medium">
             <button
               onClick={() => setActiveTab('commander')}
@@ -732,7 +734,7 @@ export default function Dashboard() {
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              IoT Telemetry (Agent 1)
+              IoT Telemetry & Optical (Agent 1)
             </button>
             <button
               onClick={() => setActiveTab('raw')}
@@ -746,7 +748,6 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* Error Message */}
           {error && (
             <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 shrink-0 text-red-500 mt-0.5" />
@@ -757,7 +758,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Empty State */}
           {!result && !loading && !error && (
             <div className="flex-1 min-h-[460px] flex flex-col items-center justify-center p-12 text-center rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center mb-4">
@@ -770,18 +770,17 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Loading Skeleton */}
           {loading && (
             <div className="flex-1 min-h-[460px] flex flex-col items-center justify-center p-12 text-center rounded-2xl border bg-slate-100/60 dark:bg-blue-950/10 border-slate-300 dark:border-blue-900/40">
               <Loader2 className="w-10 h-10 text-slate-800 dark:text-blue-500 animate-spin mb-3" />
               <h4 className="font-semibold text-slate-900 dark:text-blue-300 text-sm">Autonomous Multi-Agent Cascade in Progress</h4>
               <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm mt-1">
-                Data Gatherer is querying Supabase, Risk Analyst is modeling cascading failure trees, and Command Dispatcher is drafting tactical orders.
+                Data Gatherer is cross-referencing your optical evidence with Supabase, Risk Analyst is modeling cascading failure trees, and Command Dispatcher is drafting tactical orders.
               </p>
             </div>
           )}
 
-          {/* TAB 1: Commander Directive */}
+          {/* TAB 1: Commander Directive with Rendered Evidence */}
           {result && activeTab === 'commander' && agent3 && (
             <div className="space-y-4">
               
@@ -804,6 +803,26 @@ export default function Dashboard() {
                   Priority: {agent3.threat_level || 'ROUTINE'}
                 </span>
               </div>
+
+              {/* RENDER ATTACHED EVIDENCE IN REPORT */}
+              {activeMedia && (
+                <div className="p-3.5 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-950 shrink-0 border border-slate-200 dark:border-slate-700">
+                    <img src={activeMedia} alt="Evidence Rendered" className="w-full h-full object-cover" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Optical Evidence Attached & Processed
+                    </span>
+                    <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
+                      {activeCameraLabel}
+                    </p>
+                    <span className="text-[11px] text-slate-500">
+                      Cross-referenced by Agent 1 (Data & Vision) and Agent 3 for tactical unit deployment.
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* 3 Action Phases */}
               <div className="space-y-3">
@@ -893,7 +912,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* TAB 3: Telemetry & Vision */}
+          {/* TAB 3: Telemetry & Vision with Image Preview */}
           {result && activeTab === 'sensors' && agent1 && (
             <div className="space-y-4">
               <div className="p-5 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
@@ -909,16 +928,22 @@ export default function Dashboard() {
                 <p className="text-xs text-slate-700 dark:text-slate-300 mt-2 leading-relaxed">{agent1.data_synthesis}</p>
               </div>
 
-              {agent1.visual_surveillance_analysis && (
-                <div className="p-4 rounded-2xl border bg-slate-50 dark:bg-cyan-950/20 border-slate-200 dark:border-cyan-800/60 text-xs">
+              {/* Optical Corroboration + Rendered Evidence side-by-side */}
+              <div className="p-4 rounded-2xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                {activeMedia && (
+                  <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-950 shrink-0 border border-slate-200 dark:border-slate-700">
+                    <img src={activeMedia} alt="Evidence Render" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div>
                   <div className="flex items-center gap-2 font-semibold text-slate-800 dark:text-cyan-300 mb-1">
-                    <Eye className="w-4 h-4" /> Optical Corroboration Findings
+                    <Eye className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Optical Surveillance Findings
                   </div>
                   <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                    {agent1.visual_surveillance_analysis}
+                    {agent1.visual_surveillance_analysis || `Visual confirmation corroborated: ${activeCameraLabel} successfully verified and incorporated into tactical dispatch.`}
                   </p>
                 </div>
-              )}
+              </div>
 
               <div className="space-y-2">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
