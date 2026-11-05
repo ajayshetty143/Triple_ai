@@ -203,7 +203,9 @@ export default function Dashboard() {
           setOpticalScenario('safe');
         }
         if (ana.suggested_incident_text || ana.scene_description) {
-          setIncidentText(ana.suggested_incident_text || `Field visual evidence (${label}): ${ana.scene_description}`);
+          const synthesizedText = ana.suggested_incident_text || `Field visual evidence (${label}): ${ana.scene_description}`;
+          setIncidentText(synthesizedText);
+          setActiveDossier(synthesizedText);
         }
       }
     } catch (err) {
@@ -954,7 +956,7 @@ export default function Dashboard() {
               </div>
               <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">System Ready for Incident Ingestion</h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mt-1 leading-relaxed">
-                Trigger a scenario via Direct Dispatch or converse with the Gemini Intake Assistant on the left to authorize the autonomous response plan.
+                Upload media evidence or converse with the AI Emergency Assistant on the left to authorize the autonomous response plan.
               </p>
             </div>
           )}
@@ -983,24 +985,28 @@ export default function Dashboard() {
                     {agent3.directive_title}
                   </h3>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 ${
-                  agent3.threat_level === 'CRITICAL' ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800' :
-                  agent3.threat_level === 'HIGH' ? 'bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800' :
-                  agent3.threat_level === 'MEDIUM' ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800' :
-                  'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-700'
+                <span className={`px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 ${
+                  agent3.threat_level === 'CRITICAL' || agent3.threat_level === 'HIGH' || agent3.threat_level === 'SEVERE'
+                    ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
+                    : agent3.threat_level === 'ALL_CLEAR' || agent3.threat_level === 'SAFE'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-700'
+                    : 'bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700'
                 }`}>
-                  {agent3.threat_level === 'ALL_CLEAR' ? (
+                  {agent3.threat_level === 'ALL_CLEAR' || agent3.threat_level === 'SAFE' ? (
                     <>
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                      <span>STATUS: ALL CLEAR (SAFE)</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                      <span>STATUS: ALL CLEAR (SAFE BASELINE)</span>
                     </>
-                  ) : agent3.threat_level === 'LOW' ? (
+                  ) : agent3.threat_level === 'LOW' || agent3.threat_level === 'ROUTINE' || agent3.threat_level === 'ROUTINE_LOCAL' || agent3.threat_level === 'MEDIUM' || agent3.threat_level === 'MINOR' ? (
                     <>
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span>PRIORITY: LOW (ROUTINE)</span>
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
+                      <span>YELLOW ALERT: LOCAL INCIDENT RESPONSE</span>
                     </>
                   ) : (
-                    <span>PRIORITY: {agent3.threat_level}</span>
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-red-500 animate-ping shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                      <span>RED ALERT: {agent3.threat_level}</span>
+                    </>
                   )}
                 </span>
               </div>
@@ -1059,26 +1065,26 @@ export default function Dashboard() {
               {/* Civilian Advisory Banner */}
               {agent3.public_broadcast_alert && (
                 <div className={`p-4 rounded-2xl border text-xs flex items-start gap-3 ${
-                  agent3.threat_level === 'ALL_CLEAR'
+                  agent3.threat_level === 'ALL_CLEAR' || agent3.threat_level === 'SAFE'
                     ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800/80 text-emerald-900 dark:text-emerald-200'
-                    : agent3.threat_level === 'LOW'
-                    ? 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200'
+                    : agent3.threat_level === 'LOW' || agent3.threat_level === 'ROUTINE' || agent3.threat_level === 'ROUTINE_LOCAL' || agent3.threat_level === 'MEDIUM' || agent3.threat_level === 'MINOR'
+                    ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/80 text-amber-950 dark:text-amber-200'
                     : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/70 text-red-950 dark:text-red-200'
                 }`}>
-                  {agent3.threat_level === 'ALL_CLEAR' ? (
+                  {agent3.threat_level === 'ALL_CLEAR' || agent3.threat_level === 'SAFE' ? (
                     <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                  ) : agent3.threat_level === 'LOW' ? (
-                    <Radio className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  ) : agent3.threat_level === 'LOW' || agent3.threat_level === 'ROUTINE' || agent3.threat_level === 'ROUTINE_LOCAL' || agent3.threat_level === 'MEDIUM' || agent3.threat_level === 'MINOR' ? (
+                    <Radio className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   ) : (
                     <Radio className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
                   )}
                   <div>
                     <span className={`font-semibold block text-[11px] uppercase tracking-wider ${
-                      agent3.threat_level === 'ALL_CLEAR' ? 'text-emerald-800 dark:text-emerald-300' :
-                      agent3.threat_level === 'LOW' ? 'text-slate-700 dark:text-slate-300' :
+                      agent3.threat_level === 'ALL_CLEAR' || agent3.threat_level === 'SAFE' ? 'text-emerald-800 dark:text-emerald-300' :
+                      agent3.threat_level === 'LOW' || agent3.threat_level === 'ROUTINE' || agent3.threat_level === 'ROUTINE_LOCAL' || agent3.threat_level === 'MEDIUM' || agent3.threat_level === 'MINOR' ? 'text-amber-800 dark:text-amber-300' :
                       'text-red-800 dark:text-red-300'
                     }`}>
-                      {agent3.threat_level === 'ALL_CLEAR' ? 'Municipal Public Advisory: All Clear (Safe)' : 'Public Communications Advisory'}
+                      {agent3.threat_level === 'ALL_CLEAR' || agent3.threat_level === 'SAFE' ? 'Municipal Public Advisory: All Clear (Safe)' : 'Public Communications Advisory'}
                     </span>
                     <p className="mt-1 leading-relaxed italic">
                       &ldquo;{agent3.public_broadcast_alert}&rdquo;
@@ -1094,14 +1100,26 @@ export default function Dashboard() {
             <div className="space-y-4">
               <div className="p-5 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
                 <div>
-                  <span className={`text-[10px] font-semibold tracking-wider uppercase ${agent2.overall_threat_level === 'ALL_CLEAR' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                  <span className={`text-[10px] font-semibold tracking-wider uppercase ${
+                    agent2.overall_threat_level === 'CRITICAL' || agent2.overall_threat_level === 'HIGH'
+                      ? 'text-red-600 dark:text-red-400'
+                      : agent2.overall_threat_level === 'ALL_CLEAR' || agent2.overall_threat_level === 'SAFE'
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-amber-600 dark:text-amber-400'
+                  }`}>
                     Agent 2 Risk Modeling
                   </span>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">Cascading Infrastructure Vulnerability Tree</h3>
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] text-slate-500 block font-medium">Critical Threshold Window</span>
-                  <span className={`text-xs font-semibold ${agent2.overall_threat_level === 'ALL_CLEAR' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>{agent2.time_to_critical_failure}</span>
+                  <span className={`text-xs font-semibold ${
+                    agent2.overall_threat_level === 'CRITICAL' || agent2.overall_threat_level === 'HIGH'
+                      ? 'text-red-600 dark:text-red-400'
+                      : agent2.overall_threat_level === 'ALL_CLEAR' || agent2.overall_threat_level === 'SAFE'
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-amber-600 dark:text-amber-400'
+                  }`}>{agent2.time_to_critical_failure}</span>
                 </div>
               </div>
 
@@ -1118,10 +1136,12 @@ export default function Dashboard() {
                 </span>
                 {agent2.cascading_vulnerabilities?.map((vuln, vIdx) => (
                   <div key={vIdx} className="p-3.5 rounded-xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-start gap-3">
-                    {agent2.overall_threat_level === 'ALL_CLEAR' ? (
+                    {agent2.overall_threat_level === 'ALL_CLEAR' || agent2.overall_threat_level === 'SAFE' ? (
                       <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                     ) : (
-                      <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                      <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${
+                        agent2.overall_threat_level === 'CRITICAL' || agent2.overall_threat_level === 'HIGH' ? 'text-red-500' : 'text-amber-500'
+                      }`} />
                     )}
                     <div>
                       <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{vuln.system}</span>
@@ -1141,7 +1161,13 @@ export default function Dashboard() {
                   <span className="text-[10px] font-semibold tracking-wider uppercase text-slate-500 dark:text-blue-400">
                     Agent 1 Ingestion Audit
                   </span>
-                  <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                  <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border ${
+                    agent1.incident_classification === 'ALL_CLEAR_SAFE' || agent1.incident_classification === 'ALL_CLEAR'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-700'
+                      : agent1.incident_classification === 'ROUTINE_LOCAL' || agent1.incident_classification === 'LOW'
+                      ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700'
+                      : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
+                  }`}>
                     {agent1.incident_classification || 'EVALUATED'}
                   </span>
                 </div>

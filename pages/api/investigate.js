@@ -263,7 +263,7 @@ Your mission is to authorize an authoritative, calibrated response.
 CRITICAL DISPATCH RULES:
 - If threat_level is "ALL_CLEAR" (no harm detected in photo or text, normal parked vehicle, peaceful observation):
   • directive_title: "ALL CLEAR: ROUTINE OBSERVATION DIRECTIVE"
-  • threat_level: "ALL_CLEAR" (GREEN LIGHT STATUS)
+  • threat_level: "ALL_CLEAR" (GREEN LIGHT STATUS - SAFE BASELINE)
   • three_step_dispatch_plan: [
       {
         "step": 1,
@@ -285,12 +285,14 @@ CRITICAL DISPATCH RULES:
       }
     ]
   • public_broadcast_alert: "All clear. Normal municipal operations active. No emergency response required."
-- If threat_level is "LOW" or "ROUTINE" (actual minor bike skid, pedestrian slip):
+- If threat_level is "LOW" or "ROUTINE" (actual minor bike skid, cyclist down, pedestrian slip, minor vehicle collision):
   • directive_title: "LOCAL TRAFFIC & MEDICAL RESPONSE DIRECTIVE"
-  • threat_level: "LOW" (GREEN LIGHT STATUS)
+  • threat_level: "LOW" (YELLOW LIGHT STATUS - ROUTINE LOCAL RESPONSE)
   • Units: EMS Ambulance Squad + Local Traffic Patrol (No Hazmat, no evacuations).
   • public_broadcast_alert: "Minor traffic slowdown. Emergency services responding to local vehicle incident. No civilian evacuation required."
-- If threat_level is "HIGH" or "CRITICAL" (gas explosion, heavy flood):
+- If threat_level is "HIGH" or "CRITICAL" (gas explosion, heavy flood, catastrophic disaster):
+  • directive_title: "OPERATION SHIELD: CODE RED DIRECTIVE"
+  • threat_level: "CRITICAL" (RED LIGHT STATUS - CRISIS RESPONSE)
   • Deploy Hazmat, Fire Suppression, and Evacuation orders.
 
 Strict Rule: Output valid JSON ONLY matching this structure:
