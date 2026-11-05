@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { supabase } from '../lib/supabaseClient';
 import { 
   AlertTriangle, 
   ShieldAlert, 
@@ -38,6 +39,9 @@ import {
   ArrowUpRight,
   LogIn,
   LogOut,
+  ShieldCheck,
+  Gauge,
+  TrendingUp,
   Image as ImageIcon
 } from 'lucide-react';
 
@@ -165,6 +169,34 @@ export default function Dashboard() {
   const [clockTime, setClockTime] = useState('');
   const [visionAnalysis, setVisionAnalysis] = useState(null);
   const [isAnalyzingVision, setIsAnalyzingVision] = useState(false);
+
+  // Live Municipal IoT Sensors
+  const [citySensors, setCitySensors] = useState([
+    { id: 'SENS-GAS-07', name: 'Mainline Gas Pipeline Monitor G-7', type: 'gas_pipeline', location: 'Sector 4 - 5th Ave', status: 'NORMAL', metric: '44.8 PSI' },
+    { id: 'SENS-FLOOD-01', name: 'Stormwater Surge Drainage Gauge F-1', type: 'flood_gauge', location: 'Metropolis Riverfront', status: 'NORMAL', metric: '1.2m Depth' },
+    { id: 'SENS-PWR-12', name: 'High-Voltage Substation Transformer T-12', type: 'power_grid', location: 'Downtown Grid Core', status: 'NORMAL', metric: '13.8 kV Stable' },
+    { id: 'SENS-MED-04', name: 'Central Trauma Hospital Medical Hub', type: 'medical_hub', location: 'Sector 2 Medical Corridor', status: 'NORMAL', metric: '88% ICU Avail' },
+    { id: 'SENS-TRAF-09', name: 'Arterial Traffic Flow Optical Sensor', type: 'traffic_camera', location: '5th Ave & Elm Junction', status: 'NORMAL', metric: '42 km/h Flow' }
+  ]);
+
+  useEffect(() => {
+    async function loadCitySensors() {
+      try {
+        const { data } = await supabase.from('city_sensors').select('*');
+        if (data && data.length > 0) {
+          setCitySensors(data.map(d => ({
+            id: d.id,
+            name: d.sensor_name,
+            type: d.sensor_type,
+            location: d.location,
+            status: d.status || 'NORMAL',
+            metric: d.telemetry ? (d.telemetry.pressure_psi ? `${d.telemetry.pressure_psi} PSI` : (d.telemetry.water_level_m ? `${d.telemetry.water_level_m}m Depth` : 'Nominal')) : 'Nominal'
+          })));
+        }
+      } catch (err) {}
+    }
+    loadCitySensors();
+  }, []);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -485,42 +517,97 @@ export default function Dashboard() {
         <meta name="description" content="Enterprise Smart City Incident Orchestration System" />
       </Head>
 
-      {/* Corporate Top Navigation Bar */}
-      <header className="border-b sticky top-0 z-50 backdrop-blur-md bg-white/95 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 transition-colors shadow-sm dark:shadow-none">
-        <div className="max-w-7xl mx-auto px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      {/* Master Top Navigation Bar & Unified View Switcher (ALL IN ONE PLACE) */}
+      <header className="border-b sticky top-0 z-50 backdrop-blur-md bg-white/95 dark:bg-[#0b1122]/95 border-slate-200 dark:border-slate-800/80 transition-colors shadow-sm">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
           
           {/* Logo & Brand Identity */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 dark:bg-gradient-to-tr dark:from-blue-600 dark:via-indigo-600 dark:to-cyan-500 flex items-center justify-center text-white shadow-sm">
+            <div className="w-9 h-9 rounded-xl bg-slate-900 dark:bg-gradient-to-tr dark:from-blue-600 dark:via-indigo-600 dark:to-cyan-500 flex items-center justify-center text-white shadow-sm shrink-0">
               <Building2 className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">Metropolis Command OS</span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">Metropolis Command OS</span>
+                <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-cyan-400 border border-slate-200 dark:border-slate-700">
                   Enterprise v2.4
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
                 Autonomous City Incident Investigation & Multi-Agent Dispatch
               </p>
             </div>
           </div>
 
-          {/* Operational Metrics & Theme Toggle */}
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 text-xs font-medium">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 shadow-xs">
-                <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>Supabase Cloud</span>
+          {/* UNIFIED MASTER VIEW SWITCHER TABS (ALL IN ONE PLACE) */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-xs font-semibold overflow-x-auto max-w-full">
+            <button
+              type="button"
+              onClick={() => setActiveTab('commander')}
+              className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                activeTab === 'commander'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>Tactical Directive (Agent 3)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('analyst')}
+              className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                activeTab === 'analyst'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Risk Matrix (Agent 2)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('sensors')}
+              className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                activeTab === 'sensors'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Database className="w-3.5 h-3.5 text-emerald-400" />
+              <span>IoT & Optical (Agent 1)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('raw')}
+              className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                activeTab === 'raw'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Terminal className="w-3.5 h-3.5 text-slate-300" />
+              <span>Audit Log</span>
+            </button>
+          </div>
+
+          {/* Operational Metrics, Theme Toggle, Operator Profile */}
+          <div className="flex items-center gap-2.5 text-xs">
+            <div className="hidden xl:flex items-center gap-2 font-medium">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-slate-50 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[11px] font-mono">Supabase Online</span>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 shadow-xs">
-                <Cpu className="w-3.5 h-3.5 text-slate-700 dark:text-blue-400" />
-                <span>Groq LPU Engine</span>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-slate-50 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
+                <Cpu className="w-3 h-3 text-cyan-400" />
+                <span className="text-[11px] font-mono">Groq LPU Active</span>
               </div>
               {result?.meta?.execution_time_ms && (
-                <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 font-mono text-[11px]">
-                  <Clock className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg border bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-mono text-[11px]">
+                  <Clock className="w-3 h-3" />
                   <span>{result.meta.execution_time_ms}ms</span>
                 </div>
               )}
@@ -529,24 +616,24 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={() => setIsDark(!isDark)}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition shadow-sm"
+              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
               title="Toggle Theme"
             >
               {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
             </button>
 
-            {/* Operator Session & Gateway Toggle */}
+            {/* Operator Session */}
             {operatorSession ? (
               <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-800">
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs shadow-xs">
-                  <User className="w-3.5 h-3.5 text-blue-500" />
-                  <span className="font-semibold max-w-[130px] truncate">{operatorSession}</span>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-slate-100 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs">
+                  <User className="w-3 h-3 text-cyan-400" />
+                  <span className="font-semibold max-w-[110px] truncate text-[11px]">{operatorSession}</span>
                 </div>
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-950/40 text-slate-500 hover:text-red-600 transition shadow-xs"
-                  title="Sign Out to Smart City Gateway"
+                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-950/40 text-slate-500 hover:text-red-500 transition cursor-pointer"
+                  title="Sign Out to Gateway"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
@@ -739,110 +826,6 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
-
-              {/* 3 Scenario Mode Pills */}
-              <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-950/60 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpticalScenario('safe');
-                    setIncidentText(`Field optical evidence submitted (${activeCameraLabel}). Stationary parked vehicle / harmless street scene observed. Zero collisions, zero casualties, zero fire/leak hazard. Authorize All Clear green-light status.`);
-                  }}
-                  className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition ${
-                    opticalScenario === 'safe'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                  title="No harm or accident in photo (Triggers Green Light)"
-                >
-                  <CheckCircle2 className="w-3 h-3" />
-                  <span>🟢 Safe (No Harm)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpticalScenario('minor');
-                    setIncidentText(`Field optical evidence submitted (${activeCameraLabel}). Minor local roadway incident: individual down on road following bike skid. Conscious, minor abrasion, traffic slowed. Deploy local EMS ambulance and traffic officer.`);
-                  }}
-                  className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition ${
-                    opticalScenario === 'minor'
-                      ? 'bg-amber-600 text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                  title="Minor accident or bike skid (Triggers Low Priority EMS)"
-                >
-                  <Activity className="w-3 h-3" />
-                  <span>🟡 Minor Skid</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpticalScenario('critical');
-                    setIncidentText(`Field optical evidence submitted (${activeCameraLabel}). Severe emergency observed: heavy smoke, fire, or catastrophic structural threat. Dispatch multi-unit Hazmat and Fire suppression.`);
-                  }}
-                  className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition ${
-                    opticalScenario === 'critical'
-                      ? 'bg-red-600 text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                  title="Critical disaster (Triggers Code Red Hazmat)"
-                >
-                  <Flame className="w-3 h-3" />
-                  <span>🔴 Critical Crisis</span>
-                </button>
-              </div>
-
-              {/* Dynamic Dispatch Button */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                <span className="text-[11px] font-medium text-slate-500">
-                  {opticalScenario === 'safe' ? '🟢 Harmless: Triggers Green Light All Clear' :
-                   opticalScenario === 'minor' ? '🟡 Minor Incident: Triggers Routine EMS' :
-                   '🔴 Crisis: Triggers Hazmat & Evacuation'}
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const textToSend = incidentText && incidentText.trim()
-                        ? incidentText
-                        : (opticalScenario === 'safe'
-                            ? `Field optical evidence submitted (${activeCameraLabel}). Stationary parked vehicle / harmless street scene observed. Zero collisions, zero casualties, zero fire/leak hazard.`
-                            : `Field optical evidence submitted (${activeCameraLabel}). Minor vehicle incident documented on roadway.`);
-                      setChatInput(textToSend);
-                      chatInputRef.current?.focus();
-                    }}
-                    className="px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition cursor-pointer"
-                    title="Send scenario text to AI Assistant intake"
-                  >
-                    <Bot className="w-3.5 h-3.5 text-blue-500" />
-                    <span>Send to AI</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const textToSend = incidentText && incidentText.trim()
-                        ? incidentText
-                        : (opticalScenario === 'safe'
-                            ? `Field optical evidence submitted (${activeCameraLabel}). Stationary parked vehicle / harmless street scene observed. Zero collisions, zero casualties, zero fire/leak hazard. Authorize All Clear green-light status.`
-                            : `Field optical evidence submitted (${activeCameraLabel}). Minor vehicle incident documented on roadway. Deploy local EMS.`);
-                      handleRunInvestigation(textToSend);
-                    }}
-                    disabled={loading}
-                    className={`px-3.5 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1.5 shadow-sm transition disabled:opacity-40 text-white cursor-pointer ${
-                      opticalScenario === 'safe'
-                        ? 'bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500'
-                        : opticalScenario === 'minor'
-                        ? 'bg-amber-700 hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500'
-                        : 'bg-red-700 hover:bg-red-800 dark:bg-red-600 dark:hover:bg-red-500'
-                    }`}
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-                    <span>Authorize & Deploy Multi-Agent Cascade</span>
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -1175,62 +1158,37 @@ export default function Dashboard() {
         {/* ==================================================== */}
         <section className="lg:col-span-7 flex flex-col gap-4">
           
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2 gap-2">
-            <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-medium">
-              <button
-                onClick={() => setActiveTab('commander')}
-                className={`px-4 py-2 rounded-xl transition font-semibold ${
-                  activeTab === 'commander'
-                    ? 'bg-slate-900 text-white dark:bg-blue-600 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Action Directive (Agent 3)
-              </button>
-              <button
-                onClick={() => setActiveTab('analyst')}
-                className={`px-4 py-2 rounded-xl transition font-semibold ${
-                  activeTab === 'analyst'
-                    ? 'bg-slate-900 text-white dark:bg-blue-600 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Risk Assessment (Agent 2)
-              </button>
-              <button
-                onClick={() => setActiveTab('sensors')}
-                className={`px-4 py-2 rounded-xl transition font-semibold ${
-                  activeTab === 'sensors'
-                    ? 'bg-slate-900 text-white dark:bg-blue-600 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                IoT Telemetry & Optical (Agent 1)
-              </button>
-              <button
-                onClick={() => setActiveTab('raw')}
-                className={`px-4 py-2 rounded-xl transition font-semibold ${
-                  activeTab === 'raw'
-                    ? 'bg-slate-900 text-white dark:bg-blue-600 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                API Audit Log
-              </button>
-            </div>
-
-            {result && (
+          {/* Active Investigation Tactical Status Bar (Visible when result exists) */}
+          {result && (
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800 gap-3">
+              <div className="flex items-center gap-2">
+                <span className={`w-2.5 h-2.5 rounded-full ${
+                  agent3?.threat_level === 'CRITICAL' || agent3?.threat_level === 'HIGH'
+                    ? 'bg-red-500 animate-ping'
+                    : agent3?.threat_level === 'ALL_CLEAR' || agent3?.threat_level === 'SAFE'
+                    ? 'bg-emerald-500 animate-pulse'
+                    : 'bg-amber-500 animate-pulse'
+                }`} />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  {agent3?.threat_level === 'ALL_CLEAR' || agent3?.threat_level === 'SAFE' ? '🟢 Code Green: All Clear Dossier' :
+                   agent3?.threat_level === 'LOW' || agent3?.threat_level === 'ROUTINE' ? '🟡 Yellow Alert: Local Response Plan' :
+                   '🔴 Code Red: Emergency Crisis Plan'}
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                  {result.meta?.timestamp ? new Date(result.meta.timestamp).toLocaleTimeString() : 'Live'}
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => { setResult(null); setActiveStep(0); }}
-                className="text-xs text-slate-500 hover:text-red-600 dark:hover:text-red-400 flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-950/30 transition shrink-0 font-medium"
-                title="Clear current results"
+                className="text-xs text-slate-600 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-950/30 transition font-medium cursor-pointer"
+                title="Clear current results and return to Live City Grid"
               >
                 <RefreshCw className="w-3 h-3" />
-                <span>Clear Results</span>
+                <span>Reset / Ingest New Incident</span>
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {error && (
             <div className={`p-4 rounded-2xl border text-xs flex items-start gap-3 ${
@@ -1254,15 +1212,231 @@ export default function Dashboard() {
             </div>
           )}
 
-          {!result && !loading && !error && (
-            <div className="flex-1 min-h-[460px] flex flex-col items-center justify-center p-12 text-center rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center mb-4">
-                <FileText className="w-6 h-6" />
-              </div>
-              <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">System Ready for Incident Ingestion</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mt-1 leading-relaxed">
-                Upload media evidence or converse with the AI Emergency Assistant on the left to authorize the autonomous response plan.
+          {loading && (
+            <div className="flex-1 min-h-[460px] flex flex-col items-center justify-center p-12 text-center rounded-2xl border bg-slate-100/60 dark:bg-blue-950/10 border-slate-300 dark:border-blue-900/40">
+              <Loader2 className="w-10 h-10 text-slate-800 dark:text-blue-500 animate-spin mb-3" />
+              <h4 className="font-semibold text-slate-900 dark:text-blue-300 text-sm">Autonomous Multi-Agent Cascade in Progress</h4>
+              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm mt-1">
+                Data Gatherer is cross-referencing your optical evidence with Supabase, Risk Analyst is modeling cascading failure trees, and Command Dispatcher is drafting tactical orders.
               </p>
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* ZERO-EMPTY-SPACE: LIVE CITY OPERATIONS DECK (Rendered when result is null) */}
+          {/* ========================================================================= */}
+          {!result && !loading && (
+            <div className="space-y-4">
+              
+              {/* 1. Real-Time City Infrastructure KPI Strip */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3.5 rounded-xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs flex flex-col">
+                  <div className="flex items-center justify-between text-slate-500 mb-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider">City Grid Defense</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  </div>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">Nominal (Safe)</span>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">Zero Active Disasters</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs flex flex-col">
+                  <div className="flex items-center justify-between text-slate-500 mb-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider">Emergency Units</span>
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
+                  </div>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">48 Ready</span>
+                  <span className="text-[10px] text-slate-500 mt-0.5">EMS, Traffic & Patrol</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs flex flex-col">
+                  <div className="flex items-center justify-between text-slate-500 mb-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider">Municipal IoT</span>
+                    <Database className="w-3.5 h-3.5 text-emerald-500" />
+                  </div>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">5 Feeds Online</span>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">Supabase PostgreSQL</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs flex flex-col">
+                  <div className="flex items-center justify-between text-slate-500 mb-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider">Optical Stream</span>
+                    <Camera className="w-3.5 h-3.5 text-cyan-400" />
+                  </div>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">1080P // 30 FPS</span>
+                  <span className="text-[10px] text-slate-500 mt-0.5">VLM Vision Ready</span>
+                </div>
+              </div>
+
+              {/* 2. Live Municipal IoT Sensor Telemetry Matrix (From Supabase) */}
+              <div className="p-4 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-4 h-4 text-emerald-500" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      Municipal IoT Telemetry Matrix (Supabase Connected)
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                    ● Real-Time Feeds Active
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {citySensors.map((sensor) => (
+                    <div 
+                      key={sensor.id}
+                      className="p-3 rounded-xl border bg-slate-50/70 dark:bg-slate-950/60 border-slate-200 dark:border-slate-800 flex flex-col justify-between gap-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[10px] font-bold text-slate-700 dark:text-cyan-400">
+                          {sensor.id}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
+                          sensor.status === 'CRITICAL'
+                            ? 'bg-red-500 text-white'
+                            : sensor.status === 'WARNING'
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                        }`}>
+                          {sensor.status}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block truncate">
+                          {sensor.name}
+                        </span>
+                        <span className="text-[10px] text-slate-500 block truncate">
+                          📍 {sensor.location}
+                        </span>
+                      </div>
+                      <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-[11px]">
+                        <span className="text-slate-500">Live Reading:</span>
+                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{sensor.metric}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Rapid Tactical Scenario Launchpad (Interactive 1-Click Triggers) */}
+              <div className="p-4 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-blue-500" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      Rapid Scenario Simulation & Incident Launchpad
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-500">
+                    Click to test multi-agent decisioning
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Scenario 1: Safe Baseline */}
+                  <div className="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/40 dark:bg-emerald-950/20 flex flex-col justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 text-xs font-bold mb-1">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span>🟢 Safe Observation</span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                        Stationary parked vehicle / harmless street scene. Tests optical verification & all-clear baseline.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpticalScenario('safe');
+                        const text = PRESET_SCENARIOS[0].text;
+                        setIncidentText(text);
+                        handleRunInvestigation(text);
+                      }}
+                      className="w-full py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] flex items-center justify-center gap-1 transition shadow-xs cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3 text-emerald-200" />
+                      <span>Run Safe Baseline Test</span>
+                    </button>
+                  </div>
+
+                  {/* Scenario 2: Minor Skid */}
+                  <div className="p-3.5 rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/40 dark:bg-amber-950/20 flex flex-col justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 text-xs font-bold mb-1">
+                        <Activity className="w-3.5 h-3.5" />
+                        <span>🟡 Minor Bike Skid</span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                        Cyclist down on roadway with minor injuries. Tests routine EMS and traffic patrol dispatch.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpticalScenario('minor');
+                        const text = PRESET_SCENARIOS[1].text;
+                        setIncidentText(text);
+                        handleRunInvestigation(text);
+                      }}
+                      className="w-full py-1.5 px-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-[11px] flex items-center justify-center gap-1 transition shadow-xs cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3 text-amber-200" />
+                      <span>Run Minor Skid Test</span>
+                    </button>
+                  </div>
+
+                  {/* Scenario 3: Critical Hazard */}
+                  <div className="p-3.5 rounded-xl border border-red-200 dark:border-red-800/50 bg-red-50/40 dark:bg-red-950/20 flex flex-col justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-red-700 dark:text-red-400 text-xs font-bold mb-1">
+                        <Flame className="w-3.5 h-3.5" />
+                        <span>🔴 Code Red Hazard</span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                        Gas mainline rupture with surface fire. Tests multi-unit Hazmat, Fire & Rescue, and civil evacuation.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpticalScenario('critical');
+                        const text = PRESET_SCENARIOS[2].text;
+                        setIncidentText(text);
+                        handleRunInvestigation(text);
+                      }}
+                      className="w-full py-1.5 px-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-[11px] flex items-center justify-center gap-1 transition shadow-xs cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3 text-red-200" />
+                      <span>Run Code Red Test</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Multi-Agent Pipeline Architecture Guide */}
+              <div className="p-4 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5 text-blue-500" /> Deterministic Agent Cascade Architecture
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-500">3 Autonomous Reasoning Tiers</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                  <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+                    <span className="font-bold text-slate-900 dark:text-cyan-400 block text-[11px]">Tier 1: Data Gatherer</span>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Ingests optical tokens, verifies casualties, and queries Supabase SQL.</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+                    <span className="font-bold text-slate-900 dark:text-indigo-400 block text-[11px]">Tier 2: Risk Analyst</span>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Models cascading infrastructure vulnerability trees & critical thresholds.</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+                    <span className="font-bold text-slate-900 dark:text-emerald-400 block text-[11px]">Tier 3: Tactical Commander</span>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Dispatches tactical units (EMS/Hazmat) and issues public bulletins.</p>
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
 
