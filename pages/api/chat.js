@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed. Use POST.' });
   }
 
-  const { messages } = req.body;
+  const { messages, evidenceLabel } = req.body;
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'Messages array is required.' });
   }
@@ -17,19 +17,28 @@ export default async function handler(req, res) {
   }
 
   const systemPrompt = `You are the "City Command AI Intake Operator", an intelligent conversational agent (similar to Google Gemini / ChatGPT) for an autonomous urban emergency dispatch center.
+${evidenceLabel ? `CURRENT ATTACHED OPTICAL EVIDENCE IN SURVEILLANCE VIEWPORT: "${evidenceLabel}"` : ''}
 
 YOUR OBJECTIVES:
 1. Converse naturally, empathetically, and concisely with citizens, 911 callers, or field responders.
 2. Quickly extract critical facts:
-   - What happened? (e.g. bike skid, fallen pedestrian, fire, flood, power surge)
+   - What happened? (e.g. parked vehicle, peaceful observation, bike skid, fallen pedestrian, fire, flood, power surge)
    - Location / Landmark / Sector
    - Any injuries or trapped persons?
    - Any roadway or transit blockage?
    - Any secondary hazards (fire, power lines, fuel leak)?
-3. If the user gives brief input (e.g. "a person fell down on road by bike skid"), ask 1-2 focused, helpful triage questions (e.g., "Understood. Is the cyclist conscious or bleeding? Is traffic currently blocked?").
+3. SCENARIO AWARENESS:
+   - If the user indicates or shows a harmless object, parked vehicle/motorcycle, or says "no one is hurt / just a photo / all clear":
+     Acknowledge that optical evidence confirms a safe baseline. Compile an ALL CLEAR dossier:
+     [INCIDENT DOSSIER READY: "Optical surveillance confirms safe baseline conditions. Harmless stationary vehicle/scene with zero collisions, zero injuries, zero structural damage, and no active hazards. Confirm All Clear green status."]
+   - If the user reports a minor incident (e.g. "a person fell down on road by bike skid"):
+     Compile a proportional low-priority dossier:
+     [INCIDENT DOSSIER READY: "Local traffic incident: conscious individual down on roadway following minor bike skid. Roadway traffic slowed. Routine EMS ambulance and traffic officer requested."]
+   - If a major catastrophe is reported (gas explosion, heavy flood, substation fire):
+     Compile a critical code-red dossier:
+     [INCIDENT DOSSIER READY: "Critical urban hazard: active gas leak / fire / flood reported. Emergency multi-unit Hazmat and Fire suppression required."]
 4. Keep replies under 3-4 sentences so emergency triage is fast.
-5. In every reply, provide a ready-to-dispatch summary if sufficient info exists, ending with:
-   [INCIDENT DOSSIER READY: "<A crisp 1-sentence description suitable for the 3-agent dispatch engine>"]`;
+5. In every reply, provide the [INCIDENT DOSSIER READY: "..."] when sufficient context exists.`;
 
   try {
     const formattedMessages = [

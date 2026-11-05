@@ -40,9 +40,29 @@ import {
 
 const PRESET_SCENARIOS = [
   {
+    title: "Routine Surveillance & Safe Baseline",
+    category: "Municipal Baseline",
+    severity: "Safe (Green Light)",
+    badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60",
+    icon: CheckCircle,
+    text: "Optical surveillance confirms safe municipal baseline. Harmless stationary vehicle parked peacefully with zero collisions, zero injuries, zero structural damage, and no active hazards. Confirm safe green-light status.",
+    cctvId: "CCTV-09 (Metropolis Boulevard)",
+    cctvImage: "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    title: "Minor Vehicle Incident / Bike Skid",
+    category: "Local Medical & Traffic",
+    severity: "Low (Routine EMS)",
+    badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60",
+    icon: Activity,
+    text: "Local traffic incident: a person fell down on the roadway due to a minor motorcycle/bike skid. Subject is conscious, minor abrasion, traffic slowed. Deploy local EMS ambulance and traffic officer.",
+    cctvId: "CCTV-05 (4th Ave Crossing)",
+    cctvImage: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?auto=format&fit=crop&w=800&q=80"
+  },
+  {
     title: "Gas Mainline Rupture & Structural Hazard",
     category: "Hazardous Materials",
-    severity: "Critical",
+    severity: "Critical (Code Red)",
     badgeColor: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800/60",
     icon: Flame,
     text: "Heavy odor of natural gas reported near 5th Ave & Elm Junction with localized surface fire threatening adjacent commercial buildings. Vehicles immobilized in intersection.",
@@ -52,7 +72,7 @@ const PRESET_SCENARIOS = [
   {
     title: "Flash Flood & Arterial Inundation",
     category: "Civil Infrastructure",
-    severity: "High",
+    severity: "High (Crisis)",
     badgeColor: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/60",
     icon: Droplets,
     text: "Riverside arterial telemetry gauge indicates surge exceeding 4.85m. Roadway submerged, obstructing primary inbound medical corridor to St. Jude Trauma Center.",
@@ -62,7 +82,7 @@ const PRESET_SCENARIOS = [
   {
     title: "Power Grid Substation Overload",
     category: "Utility Grid",
-    severity: "Moderate",
+    severity: "Moderate (Warning)",
     badgeColor: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60",
     icon: Zap,
     text: "Substation Beta-9 operating at 94% peak load with transformer temperature alert. Secondary cooling alert active along South Industrial corridor.",
@@ -103,6 +123,7 @@ export default function Dashboard() {
 
   // Visual Evidence / Live Cam State
   const [mediaSource, setMediaSource] = useState('cctv');
+  const [opticalScenario, setOpticalScenario] = useState('safe'); // 'safe' | 'minor' | 'critical'
   const [activeMedia, setActiveMedia] = useState(PRESET_SCENARIOS[0].cctvImage);
   const [activeCameraLabel, setActiveCameraLabel] = useState(PRESET_SCENARIOS[0].cctvId);
   const [isVideoMedia, setIsVideoMedia] = useState(false);
@@ -172,7 +193,8 @@ export default function Dashboard() {
     setMediaSource('upload');
     const label = "CAPTURED EVIDENCE // LOCAL TERMINAL";
     setActiveCameraLabel(label);
-    setIncidentText("Live camera snapshot captured. Local street scene documented for visual verification and local dispatch.");
+    setOpticalScenario('safe');
+    setIncidentText("Live camera snapshot captured. Stationary normal scene documented with zero collisions, zero injuries, zero hazards. Authorize All Clear green-light baseline.");
   };
 
   const stopWebcam = () => {
@@ -193,7 +215,8 @@ export default function Dashboard() {
     setMediaSource('upload');
     const label = `EVIDENCE FILE: ${file.name}`;
     setActiveCameraLabel(label);
-    setIncidentText(`Field optical evidence submitted (${file.name}). Local vehicle/incident documented on roadway. Dispatch local units.`);
+    setOpticalScenario('safe');
+    setIncidentText(`Field optical evidence submitted (${file.name}). Stationary parked vehicle / harmless street scene observed. Zero collisions, zero casualties, zero fire/leak hazard. Authorize All Clear green-light status.`);
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -216,7 +239,10 @@ export default function Dashboard() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newHistory }),
+        body: JSON.stringify({ 
+          messages: newHistory,
+          evidenceLabel: activeCameraLabel 
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -240,8 +266,14 @@ export default function Dashboard() {
   };
 
   const handleRunInvestigation = async (overrideIncidentText = null) => {
-    const textToInvestigate = (overrideIncidentText || incidentText || activeDossier || '').trim();
-    if (!textToInvestigate) return;
+    let textToInvestigate = (overrideIncidentText || incidentText || activeDossier || '').trim();
+    if (!textToInvestigate) {
+      if (opticalScenario === 'safe') {
+        textToInvestigate = `Field optical evidence submitted (${activeCameraLabel}). Stationary parked vehicle / harmless scene observed. Zero collisions, zero casualties, zero fire/leak hazard. Authorize All Clear green-light status.`;
+      } else {
+        textToInvestigate = `Field optical evidence submitted (${activeCameraLabel}). Local vehicle incident documented on roadway. Deploy local EMS and traffic unit.`;
+      }
+    }
 
     setLoading(true);
     setError(null);
@@ -460,28 +492,104 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* DIRECT BUTTON: Send Evidence to 3 Agents */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-900/90 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                  Optical Evidence Active
+            {/* Optical Evidence & Smart Scenario Triage Bar */}
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-900/90 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${opticalScenario === 'safe' ? 'bg-emerald-500 animate-pulse' : opticalScenario === 'minor' ? 'bg-amber-500' : 'bg-red-500'}`} />
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    Optical Evidence: <span className="font-mono text-slate-600 dark:text-slate-400 font-normal truncate max-w-[190px] inline-block align-bottom">{activeCameraLabel}</span>
+                  </span>
+                </div>
+                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                  Scenario Triage
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const textToSend = incidentText && incidentText.trim() 
-                    ? incidentText 
-                    : `Field optical evidence submitted (${activeCameraLabel}). Local vehicle/incident documented on roadway. Verify scene and deploy appropriate local units.`;
-                  handleRunInvestigation(textToSend);
-                }}
-                disabled={loading}
-                className="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition disabled:opacity-40"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>Dispatch Agents with this Image</span>
-              </button>
+
+              {/* 3 Scenario Mode Pills */}
+              <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-950/60 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpticalScenario('safe');
+                    setIncidentText(`Field optical evidence submitted (${activeCameraLabel}). Stationary parked vehicle / harmless street scene observed. Zero collisions, zero casualties, zero fire/leak hazard. Authorize All Clear green-light status.`);
+                  }}
+                  className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition ${
+                    opticalScenario === 'safe'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                  title="No harm or accident in photo (Triggers Green Light)"
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>🟢 Safe (No Harm)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpticalScenario('minor');
+                    setIncidentText(`Field optical evidence submitted (${activeCameraLabel}). Minor local roadway incident: individual down on road following bike skid. Conscious, minor abrasion, traffic slowed. Deploy local EMS ambulance and traffic officer.`);
+                  }}
+                  className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition ${
+                    opticalScenario === 'minor'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                  title="Minor accident or bike skid (Triggers Low Priority EMS)"
+                >
+                  <Activity className="w-3 h-3" />
+                  <span>🟡 Minor Skid</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpticalScenario('critical');
+                    setIncidentText(`Field optical evidence submitted (${activeCameraLabel}). Severe emergency observed: heavy smoke, fire, or catastrophic structural threat. Dispatch multi-unit Hazmat and Fire suppression.`);
+                  }}
+                  className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition ${
+                    opticalScenario === 'critical'
+                      ? 'bg-red-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                  title="Critical disaster (Triggers Code Red Hazmat)"
+                >
+                  <Flame className="w-3 h-3" />
+                  <span>🔴 Critical Crisis</span>
+                </button>
+              </div>
+
+              {/* Dynamic Dispatch Button */}
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[11px] font-medium text-slate-500">
+                  {opticalScenario === 'safe' ? '🟢 Harmless: Triggers Green Light All Clear' :
+                   opticalScenario === 'minor' ? '🟡 Minor Incident: Triggers Routine EMS' :
+                   '🔴 Crisis: Triggers Hazmat & Evacuation'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const textToSend = incidentText && incidentText.trim()
+                      ? incidentText
+                      : (opticalScenario === 'safe'
+                          ? `Field optical evidence submitted (${activeCameraLabel}). Stationary parked vehicle / harmless street scene observed. Zero collisions, zero casualties, zero fire/leak hazard. Authorize All Clear green-light status.`
+                          : `Field optical evidence submitted (${activeCameraLabel}). Minor vehicle incident documented on roadway. Deploy local EMS.`);
+                    handleRunInvestigation(textToSend);
+                  }}
+                  disabled={loading}
+                  className={`px-3.5 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1.5 shadow-sm transition disabled:opacity-40 text-white ${
+                    opticalScenario === 'safe'
+                      ? 'bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500'
+                      : opticalScenario === 'minor'
+                      ? 'bg-amber-700 hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500'
+                      : 'bg-red-700 hover:bg-red-800 dark:bg-red-600 dark:hover:bg-red-500'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                  <span>Dispatch Agents with this Scenario</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -527,7 +635,7 @@ export default function Dashboard() {
                   <div className="flex items-center gap-2">
                     <Sliders className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
                     <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Example Crisis:
+                      Preset Scenarios:
                     </span>
                   </div>
                   <select
@@ -539,7 +647,7 @@ export default function Dashboard() {
                       }
                     }}
                     defaultValue=""
-                    className="flex-1 max-w-[260px] text-xs rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-blue-500 font-medium cursor-pointer truncate"
+                    className="flex-1 max-w-[270px] text-xs rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-blue-500 font-medium cursor-pointer truncate"
                   >
                     <option value="" disabled>Choose an example scenario...</option>
                     {PRESET_SCENARIOS.map((sc, i) => (
@@ -550,7 +658,7 @@ export default function Dashboard() {
                   </select>
                 </div>
 
-                {/* Input Textarea with ALL CLEAR button */}
+                {/* Input Textarea with 1-Click CAD Scenario Chips */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label htmlFor="incidentText" className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -570,6 +678,43 @@ export default function Dashboard() {
                       )}
                       <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">Proportional Response Active</span>
                     </div>
+                  </div>
+
+                  {/* 1-Click CAD Scenario Chips */}
+                  <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpticalScenario('safe');
+                        setIncidentText("Optical surveillance confirms safe municipal baseline. Harmless stationary vehicle parked peacefully with zero collisions, zero injuries, zero structural damage, and no active hazards. Confirm safe green-light status.");
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition flex items-center gap-1"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span>🟢 All Clear (Safe)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpticalScenario('minor');
+                        setIncidentText("Local street incident: a person fell down on the road due to a minor motorcycle/bike skid. Subject is conscious, minor abrasion, traffic slowed. Requesting local EMS ambulance and traffic officer.");
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition flex items-center gap-1"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      <span>🟡 Bike Skid (Minor)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpticalScenario('critical');
+                        setIncidentText("Heavy odor of natural gas reported near 5th Ave & Elm Junction with localized surface fire threatening adjacent commercial buildings. Vehicles immobilized in intersection.");
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/60 hover:bg-red-100 dark:hover:bg-red-900/60 transition flex items-center gap-1"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      <span>🔴 Gas Rupture (Critical)</span>
+                    </button>
                   </div>
                   <div className="relative">
                     <textarea
@@ -843,13 +988,25 @@ export default function Dashboard() {
                     {agent3.directive_title}
                   </h3>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 ${
                   agent3.threat_level === 'CRITICAL' ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800' :
                   agent3.threat_level === 'HIGH' ? 'bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800' :
                   agent3.threat_level === 'MEDIUM' ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800' :
-                  'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
+                  'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-700'
                 }`}>
-                  Priority: {agent3.threat_level || 'ROUTINE'}
+                  {agent3.threat_level === 'ALL_CLEAR' ? (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                      <span>STATUS: ALL CLEAR (SAFE)</span>
+                    </>
+                  ) : agent3.threat_level === 'LOW' ? (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <span>PRIORITY: LOW (ROUTINE)</span>
+                    </>
+                  ) : (
+                    <span>PRIORITY: {agent3.threat_level}</span>
+                  )}
                 </span>
               </div>
 
@@ -906,13 +1063,29 @@ export default function Dashboard() {
 
               {/* Civilian Advisory Banner */}
               {agent3.public_broadcast_alert && (
-                <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-3">
-                  <Radio className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className={`p-4 rounded-2xl border text-xs flex items-start gap-3 ${
+                  agent3.threat_level === 'ALL_CLEAR'
+                    ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800/80 text-emerald-900 dark:text-emerald-200'
+                    : agent3.threat_level === 'LOW'
+                    ? 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200'
+                    : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/70 text-red-950 dark:text-red-200'
+                }`}>
+                  {agent3.threat_level === 'ALL_CLEAR' ? (
+                    <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  ) : agent3.threat_level === 'LOW' ? (
+                    <Radio className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <Radio className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                  )}
                   <div>
-                    <span className="font-semibold block text-[11px] uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                      Public Communications Advisory
+                    <span className={`font-semibold block text-[11px] uppercase tracking-wider ${
+                      agent3.threat_level === 'ALL_CLEAR' ? 'text-emerald-800 dark:text-emerald-300' :
+                      agent3.threat_level === 'LOW' ? 'text-slate-700 dark:text-slate-300' :
+                      'text-red-800 dark:text-red-300'
+                    }`}>
+                      {agent3.threat_level === 'ALL_CLEAR' ? 'Municipal Public Advisory: All Clear (Safe)' : 'Public Communications Advisory'}
                     </span>
-                    <p className="mt-1 leading-relaxed italic text-slate-700 dark:text-slate-300">
+                    <p className="mt-1 leading-relaxed italic">
                       &ldquo;{agent3.public_broadcast_alert}&rdquo;
                     </p>
                   </div>
@@ -926,14 +1099,14 @@ export default function Dashboard() {
             <div className="space-y-4">
               <div className="p-5 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-semibold tracking-wider uppercase text-amber-600 dark:text-amber-400">
+                  <span className={`text-[10px] font-semibold tracking-wider uppercase ${agent2.overall_threat_level === 'ALL_CLEAR' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
                     Agent 2 Risk Modeling
                   </span>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">Cascading Infrastructure Vulnerability Tree</h3>
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] text-slate-500 block font-medium">Critical Threshold Window</span>
-                  <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">{agent2.time_to_critical_failure}</span>
+                  <span className={`text-xs font-semibold ${agent2.overall_threat_level === 'ALL_CLEAR' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>{agent2.time_to_critical_failure}</span>
                 </div>
               </div>
 
@@ -950,7 +1123,11 @@ export default function Dashboard() {
                 </span>
                 {agent2.cascading_vulnerabilities?.map((vuln, vIdx) => (
                   <div key={vIdx} className="p-3.5 rounded-xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-start gap-3">
-                    <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    {agent2.overall_threat_level === 'ALL_CLEAR' ? (
+                      <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    )}
                     <div>
                       <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{vuln.system}</span>
                       <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{vuln.risk}</p>
@@ -1017,9 +1194,10 @@ export default function Dashboard() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-slate-500 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40 italic">
-                    Baseline sensors within normal operational tolerances. No anomalous infrastructure correlation.
-                  </p>
+                  <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 flex items-center gap-2.5 text-xs text-emerald-800 dark:text-emerald-300">
+                    <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Baseline city sensors operating within normal parameters. Zero anomalous hazards detected.</span>
+                  </div>
                 )}
               </div>
             </div>
