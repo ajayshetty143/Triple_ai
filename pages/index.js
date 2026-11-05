@@ -25,37 +25,54 @@ import {
   Bot,
   User,
   Sparkles,
-  ZapOff
+  Sun,
+  Moon,
+  Building2,
+  Layers,
+  MapPin,
+  CheckCircle,
+  FileText,
+  Sliders,
+  ArrowUpRight
 } from 'lucide-react';
 
 const PRESET_SCENARIOS = [
   {
-    title: "Gas Leak & Structural Fire",
+    title: "Gas Mainline Rupture & Structural Hazard",
+    category: "Hazardous Materials",
+    severity: "Critical",
+    badgeColor: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800/60",
     icon: Flame,
-    color: "text-amber-400 border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20",
-    text: "Heavy odor of natural gas reported near 5th Ave & Elm Junction with surface fire spreading toward commercial buildings. Multiple vehicles stranded in intersection.",
-    cctvId: "CAM-07 (5th Ave Junction)",
+    text: "Heavy odor of natural gas reported near 5th Ave & Elm Junction with localized surface fire threatening adjacent commercial buildings. Vehicles immobilized in intersection.",
+    cctvId: "CCTV-07 (5th Ave Junction)",
     cctvImage: "https://images.unsplash.com/photo-1542385151-efd9000785a0?auto=format&fit=crop&w=800&q=80"
   },
   {
-    title: "Flash Flood & Inundation",
+    title: "Flash Flood & Arterial Inundation",
+    category: "Civil Infrastructure",
+    severity: "High",
+    badgeColor: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/60",
     icon: Droplets,
-    color: "text-blue-400 border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20",
-    text: "Riverside arterial water gauge indicates sudden surge above 4.8m. Lower River District roadway submerged, blocking main emergency route to St. Jude Trauma Center.",
-    cctvId: "CAM-01 (Riverside Arterial)",
+    text: "Riverside arterial telemetry gauge indicates surge exceeding 4.85m. Roadway submerged, obstructing primary inbound medical corridor to St. Jude Trauma Center.",
+    cctvId: "CCTV-01 (Riverside Arterial)",
     cctvImage: "https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=800&q=80"
   },
   {
-    title: "Substation Grid Overload",
+    title: "Power Grid Substation Overload",
+    category: "Utility Grid",
+    severity: "Moderate",
+    badgeColor: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60",
     icon: Zap,
-    color: "text-yellow-400 border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/20",
-    text: "Substation Beta-9 reporting 94% load and critical transformer heating. Secondary coolant valve warning triggered in Industrial Park border.",
-    cctvId: "CAM-04 (Substation Beta-9)",
+    text: "Substation Beta-9 operating at 94% peak load with transformer temperature alert. Secondary cooling alert active along South Industrial corridor.",
+    cctvId: "CCTV-04 (Substation Beta-9)",
     cctvImage: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80"
   }
 ];
 
 export default function Dashboard() {
+  // Theme state: dark / light
+  const [isDark, setIsDark] = useState(true);
+
   // Input Mode: 'quick' (CAD entry) or 'chat' (Gemini-style Conversational Triage)
   const [inputMode, setInputMode] = useState('quick'); 
 
@@ -66,7 +83,7 @@ export default function Dashboard() {
   const [chatMessages, setChatMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello! I am your City Emergency AI Intake Assistant. Describe any urban incident, accident, or hazard. I'll help triage the situation and prepare a dispatch dossier for the 3-agent command cascade."
+      content: "Hello. I am the City Emergency Intake AI. Please provide the incident location, observed conditions, or injuries. I will synthesize the briefing and dispatch the multi-agent emergency cascade."
     }
   ]);
   const [chatInput, setChatInput] = useState('');
@@ -75,8 +92,8 @@ export default function Dashboard() {
 
   // Investigation Pipeline State
   const [loading, setLoading] = useState(false);
-  const [activeStep, setActiveStep] = useState(0); // 0 = idle, 1 = Agent 1, 2 = Agent 2, 3 = Agent 3
-  const [activeTab, setActiveTab] = useState('commander'); // 'commander', 'analyst', 'sensors', 'raw'
+  const [activeStep, setActiveStep] = useState(0);
+  const [activeTab, setActiveTab] = useState('commander');
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
@@ -97,21 +114,20 @@ export default function Dashboard() {
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      setClockTime(now.toTimeString().split(' ')[0] + ' UTC');
+      setClockTime(now.toLocaleTimeString('en-US', { hour12: false }) + ' EST');
     };
     updateTime();
     const timer = setInterval(updateTime, 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Auto-scroll chat window
+  // Auto-scroll chat
   useEffect(() => {
     if (chatScrollRef.current) {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
   }, [chatMessages, chatLoading]);
 
-  // Handle Scenario Switch
   const selectScenario = (scenario) => {
     setIncidentText(scenario.text);
     if (mediaSource === 'cctv') {
@@ -121,7 +137,6 @@ export default function Dashboard() {
     }
   };
 
-  // Start Live Laptop Webcam
   const startWebcam = async () => {
     try {
       setMediaSource('webcam');
@@ -133,15 +148,14 @@ export default function Dashboard() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
-      setActiveCameraLabel("LIVE OPERATOR FEED // TERMINAL CAM-01");
+      setActiveCameraLabel("LIVE TERMINAL OPTICAL SENSOR");
     } catch (err) {
       console.error("Webcam error:", err);
-      alert("Could not access camera: " + err.message);
+      alert("Camera access error: " + err.message);
       setIsWebcamActive(false);
     }
   };
 
-  // Capture Snapshot from Live Webcam
   const captureWebcamSnapshot = () => {
     if (!videoRef.current) return;
     const canvas = document.createElement('canvas');
@@ -154,10 +168,9 @@ export default function Dashboard() {
     setIsVideoMedia(false);
     stopWebcam();
     setMediaSource('upload');
-    setActiveCameraLabel("CAPTURED SNAPSHOT // LOCAL SURVEILLANCE");
+    setActiveCameraLabel("CAPTURED EVIDENCE // LOCAL TERMINAL");
   };
 
-  // Stop Webcam
   const stopWebcam = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
@@ -166,7 +179,6 @@ export default function Dashboard() {
     setIsWebcamActive(false);
   };
 
-  // Handle File Upload (Image or Video)
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -175,7 +187,7 @@ export default function Dashboard() {
     const isVideo = file.type.startsWith('video/');
     setIsVideoMedia(isVideo);
     setMediaSource('upload');
-    setActiveCameraLabel(`UPLOADED EVIDENCE // ${file.name.substring(0, 24)}`);
+    setActiveCameraLabel(`EVIDENCE FILE: ${file.name}`);
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -184,7 +196,6 @@ export default function Dashboard() {
     reader.readAsDataURL(file);
   };
 
-  // Handle Conversational Chat (Gemini / ChatGPT Style)
   const handleSendChatMessage = async (e) => {
     e?.preventDefault();
     if (!chatInput.trim() || chatLoading) return;
@@ -215,14 +226,13 @@ export default function Dashboard() {
       console.error(err);
       setChatMessages([
         ...newHistory, 
-        { role: 'assistant', content: 'Connection issue with intake service: ' + err.message }
+        { role: 'assistant', content: 'Intake service unavailable: ' + err.message }
       ]);
     } finally {
       setChatLoading(false);
     }
   };
 
-  // Run 3-Agent Waterfall Pipeline
   const handleRunInvestigation = async (overrideIncidentText = null) => {
     const textToInvestigate = (overrideIncidentText || incidentText || activeDossier || '').trim();
     if (!textToInvestigate) return;
@@ -251,7 +261,7 @@ export default function Dashboard() {
 
       const data = await response.json();
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Pipeline investigation failed.');
+        throw new Error(data.error || 'Pipeline execution failed.');
       }
 
       setResult(data);
@@ -271,160 +281,153 @@ export default function Dashboard() {
   const agent3 = result?.pipeline?.agent3_city_commander;
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-gray-100 flex flex-col font-sans">
+    <div className={`min-h-screen transition-colors duration-200 font-sans ${isDark ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       <Head>
-        <title>AUTONOMOUS CITY COMMAND // INCIDENT RESPONSE</title>
-        <meta name="description" content="Autonomous 3-Agent Urban Emergency Pipeline with Conversational AI & Surveillance" />
+        <title>METROPOLIS // Autonomous Emergency Incident Platform</title>
+        <meta name="description" content="Enterprise Smart City Incident Orchestration System" />
       </Head>
 
-      {/* Top Navigation Bar */}
-      <header className="border-b border-gray-800 bg-[#0d1322]/80 backdrop-blur px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400">
-            <ShieldAlert className="w-6 h-6 animate-pulse" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs uppercase tracking-widest text-red-400 font-semibold">City Command Operations</span>
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-            </div>
-            <h1 className="text-lg font-bold tracking-tight text-white">Autonomous Incident Investigation System</h1>
-          </div>
-        </div>
-
-        {/* System Badges */}
-        <div className="flex items-center gap-3 text-xs font-mono">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-900 border border-gray-800 text-gray-300">
-            <Database className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Supabase Connected</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-900 border border-gray-800 text-gray-300">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Gemini-Style Triage Active</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-900 border border-gray-800 text-gray-300">
-            <Cpu className="w-3.5 h-3.5 text-emerald-400" />
-            <span>3-Agent Cascade</span>
-          </div>
-          {result?.meta?.execution_time_ms && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-950/60 border border-emerald-500/40 text-emerald-300">
-              <Clock className="w-3.5 h-3.5" />
-              <span>{result.meta.execution_time_ms}ms</span>
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* Main Content Grid */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Left Column: Visual Feed, Input & Stepper (5 Cols) */}
-        <section className="lg:col-span-5 flex flex-col gap-6">
+      {/* Corporate Top Navigation Bar */}
+      <header className="border-b sticky top-0 z-50 backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 transition-colors">
+        <div className="max-w-7xl mx-auto px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
           
-          {/* ==================================================== */}
-          {/* VISUAL SURVEILLANCE & CAMERA HUD FEED                */}
-          {/* ==================================================== */}
-          <div className="bg-[#0f172a]/80 border border-gray-800 rounded-xl overflow-hidden shadow-xl flex flex-col">
-            <div className="p-3 border-b border-gray-800 bg-[#0b101d] flex items-center justify-between">
+          {/* Logo & Brand Identity */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
               <div className="flex items-center gap-2">
-                <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="font-mono text-[11px] font-bold text-gray-200 tracking-wider">
-                  SURVEILLANCE HUD // {activeCameraLabel}
+                <span className="font-semibold text-base tracking-tight font-sans">Metropolis Command OS</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-medium">
+                  Enterprise v2.4
                 </span>
               </div>
-              <span className="font-mono text-[10px] text-gray-400">{clockTime}</span>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Autonomous City Incident Investigation & Multi-Agent Dispatch
+              </p>
             </div>
+          </div>
 
-            {/* Video Viewfinder with Real Security Cam HUD */}
-            <div className="relative bg-black h-44 w-full flex items-center justify-center overflow-hidden border-b border-gray-800/80">
-              
-              {/* CCTV HUD Overlay */}
-              <div className="absolute inset-0 pointer-events-none z-10 p-3 flex flex-col justify-between font-mono text-[10px] text-emerald-400/80">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-1 bg-black/60 px-1.5 py-0.5 rounded border border-emerald-500/30">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
-                    <span className="text-red-400 font-bold">REC ●</span>
-                  </div>
-                  <div className="bg-black/60 px-1.5 py-0.5 rounded border border-emerald-500/30">
-                    FPS: 30 // RTSP-STREAM
-                  </div>
-                </div>
-                
-                <div className="self-center opacity-30 text-emerald-400 text-lg select-none">
-                  +
-                </div>
-
-                <div className="flex justify-between items-end">
-                  <span className="bg-black/60 px-1.5 py-0.5 rounded border border-emerald-500/30">
-                    OPTICAL RES: 1080P
-                  </span>
-                  <span className="bg-black/60 px-1.5 py-0.5 rounded border border-emerald-500/30">
-                    ZONE: SECTOR 4
-                  </span>
-                </div>
+          {/* Operational Metrics & Theme Toggle */}
+          <div className="flex items-center gap-3">
+            
+            {/* System Status Badges */}
+            <div className="hidden sm:flex items-center gap-2 text-xs font-medium">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-slate-100/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-300">
+                <Database className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Supabase Cloud</span>
               </div>
-
-              {/* Render Media: Live Webcam, Video, or Image */}
-              {isWebcamActive ? (
-                <video 
-                  ref={videoRef} 
-                  autoPlay 
-                  playsInline 
-                  muted 
-                  className="w-full h-full object-cover"
-                />
-              ) : isVideoMedia && activeMedia ? (
-                <video 
-                  src={activeMedia} 
-                  autoPlay 
-                  loop 
-                  muted 
-                  playsInline 
-                  className="w-full h-full object-cover"
-                />
-              ) : activeMedia ? (
-                <img 
-                  src={activeMedia} 
-                  alt="Surveillance Feed" 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center text-gray-500 text-xs">
-                  <Camera className="w-8 h-8 mb-1 opacity-40" />
-                  <span>No Optical Signal Connected</span>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-slate-100/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-300">
+                <Cpu className="w-3.5 h-3.5 text-blue-500" />
+                <span>Groq LPU Engine</span>
+              </div>
+              {result?.meta?.execution_time_ms && (
+                <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 font-mono text-[11px]">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>{result.meta.execution_time_ms}ms</span>
                 </div>
               )}
             </div>
 
-            {/* Media Action Controls */}
-            <div className="p-3 bg-[#0d1424] flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-              <div className="flex items-center gap-1.5">
+            {/* Dark / Light Mode Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsDark(!isDark)}
+              className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition shadow-sm"
+              title="Toggle Theme"
+            >
+              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Corporate Workspace */}
+      <main className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* ==================================================== */}
+        {/* LEFT CONSOLE: SURVEILLANCE & INTAKE (5 Columns)     */}
+        {/* ==================================================== */}
+        <section className="lg:col-span-5 flex flex-col gap-6">
+
+          {/* Surveillance & Optical Feed Card */}
+          <div className="rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-900/60">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  {activeCameraLabel}
+                </span>
+              </div>
+              <span className="text-[11px] font-mono text-slate-500">{clockTime}</span>
+            </div>
+
+            {/* Viewport */}
+            <div className="relative bg-slate-950 aspect-video w-full flex items-center justify-center overflow-hidden">
+              <div className="absolute inset-0 pointer-events-none z-10 p-3 flex flex-col justify-between font-mono text-[10px] text-white/80">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded border border-white/10">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                    <span className="text-red-400 font-semibold">LIVE TRANSMISSION</span>
+                  </div>
+                  <div className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded border border-white/10 text-slate-300">
+                    30 FPS // 1080P
+                  </div>
+                </div>
+                <div className="flex justify-between items-end">
+                  <span className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded border border-white/10">
+                    CHANNEL: PRIMARY
+                  </span>
+                  <span className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded border border-white/10">
+                    METROPOLIS SECTOR 4
+                  </span>
+                </div>
+              </div>
+
+              {isWebcamActive ? (
+                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+              ) : isVideoMedia && activeMedia ? (
+                <video src={activeMedia} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+              ) : activeMedia ? (
+                <img src={activeMedia} alt="Surveillance Stream" className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-slate-500 text-xs">
+                  <Camera className="w-8 h-8 mb-1 opacity-40" />
+                  <span>Optical Stream Disconnected</span>
+                </div>
+              )}
+            </div>
+
+            {/* Video Controls */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-950/40 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
                 {isWebcamActive ? (
                   <button
                     type="button"
                     onClick={captureWebcamSnapshot}
-                    className="px-2.5 py-1 rounded bg-red-600 hover:bg-red-500 text-white font-bold flex items-center gap-1.5 transition text-[11px]"
+                    className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium flex items-center gap-1.5 transition text-xs shadow-sm"
                   >
                     <Camera className="w-3.5 h-3.5" />
-                    <span>Snap Snapshot</span>
+                    <span>Capture Snapshot</span>
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={startWebcam}
-                    className="px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 flex items-center gap-1.5 transition text-[11px] border border-gray-700"
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/80 font-medium flex items-center gap-1.5 transition text-xs shadow-sm"
                   >
-                    <Video className="w-3.5 h-3.5 text-red-400" />
-                    <span>Live Cam</span>
+                    <Video className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Terminal Cam</span>
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 flex items-center gap-1.5 transition text-[11px] border border-gray-700"
+                  className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/80 font-medium flex items-center gap-1.5 transition text-xs shadow-sm"
                 >
-                  <Upload className="w-3.5 h-3.5 text-cyan-400" />
+                  <Upload className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                   <span>Upload Media</span>
                 </button>
                 <input 
@@ -445,97 +448,98 @@ export default function Dashboard() {
                   setActiveCameraLabel(PRESET_SCENARIOS[0].cctvId);
                   setIsVideoMedia(false);
                 }}
-                className="text-[10px] text-gray-400 hover:text-gray-200 flex items-center gap-1"
-                title="Reset to Municipal CCTV Feeds"
+                className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1"
+                title="Reset to Municipal Feeds"
               >
                 <RefreshCw className="w-3 h-3" />
-                <span>Reset CCTV</span>
+                <span>Reset Feed</span>
               </button>
             </div>
           </div>
 
-          {/* ==================================================== */}
-          {/* DUAL MODE SELECTOR: QUICK CAD vs GEMINI CHAT BOT    */}
-          {/* ==================================================== */}
-          <div className="bg-[#0f172a]/70 border border-gray-800/80 rounded-xl p-5 shadow-lg flex flex-col gap-4">
+          {/* Incident Ingestion Hub */}
+          <div className="rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm p-5 flex flex-col gap-4">
             
-            {/* Mode Switch Tabs */}
-            <div className="flex items-center justify-between border-b border-gray-800 pb-3">
-              <span className="text-xs font-mono uppercase tracking-wider text-gray-400 font-bold flex items-center gap-1.5">
-                <Radio className="w-4 h-4 text-cyan-400" /> Intake Mechanism
+            {/* Mode Switcher Tabs */}
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Intake Channel
               </span>
-              <div className="flex items-center gap-1 bg-gray-900 p-1 rounded-lg border border-gray-800 text-xs font-mono">
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-medium">
                 <button
                   type="button"
                   onClick={() => setInputMode('quick')}
-                  className={`px-3 py-1 rounded-md transition font-medium ${
-                    inputMode === 'quick' 
-                      ? 'bg-red-600 text-white shadow-sm' 
-                      : 'text-gray-400 hover:text-gray-200'
+                  className={`px-3 py-1.5 rounded-lg transition ${
+                    inputMode === 'quick'
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm font-semibold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  ⚡ Direct Entry
+                  ⚡ Direct Dispatch
                 </button>
                 <button
                   type="button"
                   onClick={() => setInputMode('chat')}
-                  className={`px-3 py-1 rounded-md transition font-medium flex items-center gap-1.5 ${
-                    inputMode === 'chat' 
-                      ? 'bg-cyan-600 text-white shadow-sm' 
-                      : 'text-gray-400 hover:text-gray-200'
+                  className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                    inputMode === 'chat'
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm font-semibold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <Bot className="w-3.5 h-3.5" />
-                  <span>Gemini Intake Bot</span>
+                  <Bot className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Gemini Assistant</span>
                 </button>
               </div>
             </div>
 
-            {/* ---------------------------------------------------- */}
-            {/* MODE 1: DIRECT CAD / PRESET ENTRY                   */}
-            {/* ---------------------------------------------------- */}
+            {/* MODE 1: Direct Dispatch */}
             {inputMode === 'quick' && (
               <div className="space-y-4">
-                {/* Presets */}
-                <div className="flex flex-col gap-2">
-                  <span className="text-[11px] font-mono uppercase tracking-wider text-gray-400">
-                    Quick One-Click Scenarios:
+                {/* Presets Grid */}
+                <div className="space-y-2">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Select Standard Crisis Profile:
                   </span>
-                  {PRESET_SCENARIOS.map((scenario, idx) => {
-                    const IconComponent = scenario.icon;
-                    return (
+                  <div className="grid grid-cols-1 gap-2">
+                    {PRESET_SCENARIOS.map((sc, i) => (
                       <button
-                        key={idx}
+                        key={i}
                         type="button"
-                        onClick={() => selectScenario(scenario)}
-                        className={`text-left p-2.5 rounded-lg border text-xs transition flex items-center justify-between gap-3 ${scenario.color}`}
+                        onClick={() => selectScenario(sc)}
+                        className="text-left p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition flex items-center justify-between group"
                       >
-                        <div className="flex items-center gap-2.5 font-medium">
-                          <IconComponent className="w-4 h-4 shrink-0" />
-                          <span>{scenario.title}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 group-hover:bg-blue-600 group-hover:text-white transition">
+                            <sc.icon className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{sc.title}</p>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400">{sc.category}</span>
+                          </div>
                         </div>
-                        <ChevronRight className="w-4 h-4 opacity-50 shrink-0" />
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${sc.badgeColor}`}>
+                          {sc.severity}
+                        </span>
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
 
-                {/* Input Text Area */}
+                {/* Input Textarea */}
                 <div>
-                  <label htmlFor="incident" className="text-xs font-mono uppercase tracking-wider text-gray-400 flex items-center justify-between mb-2">
-                    <span className="flex items-center gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Custom Incident Report
-                    </span>
-                    <span className="text-[10px] text-emerald-400 font-mono">Proportional Reasoning Active</span>
-                  </label>
-                  
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label htmlFor="incidentText" className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                      Incident Brief / Custom Report:
+                    </label>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Proportional Response Active</span>
+                  </div>
                   <textarea
-                    id="incident"
+                    id="incidentText"
                     rows={3}
                     value={incidentText}
                     onChange={(e) => setIncidentText(e.target.value)}
-                    placeholder="Enter any incident (e.g. 'a person fell down on road by bike skid' or 'transformer fire')..."
-                    className="w-full bg-[#080d1a] border border-gray-700/60 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 font-sans transition resize-none"
+                    placeholder="Enter incident description (e.g., 'a person fell down on road by bike skid' or 'substation fire')..."
+                    className="w-full text-xs rounded-xl p-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition resize-none leading-relaxed"
                   />
                 </div>
 
@@ -543,62 +547,43 @@ export default function Dashboard() {
                   type="button"
                   onClick={() => handleRunInvestigation()}
                   disabled={loading || !incidentText.trim()}
-                  className="w-full py-3 px-4 rounded-lg bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-red-950/40 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Executing 3-Agent Cascade...</span>
+                      <span>Orchestrating 3-Agent Cascade...</span>
                     </>
                   ) : (
                     <>
                       <Send className="w-4 h-4" />
-                      <span>Initiate Autonomous Investigation</span>
+                      <span>Deploy Autonomous Emergency Investigation</span>
                     </>
                   )}
                 </button>
               </div>
             )}
 
-            {/* ---------------------------------------------------- */}
-            {/* MODE 2: CONVERSATIONAL GEMINI-STYLE INTAKE BOT      */}
-            {/* ---------------------------------------------------- */}
+            {/* MODE 2: Gemini Conversational Assistant */}
             {inputMode === 'chat' && (
               <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between text-[11px] font-mono text-cyan-400 bg-cyan-950/30 p-2 rounded-lg border border-cyan-500/20">
-                  <div className="flex items-center gap-1.5">
-                    <Bot className="w-3.5 h-3.5" />
-                    <span>Chatting with Virtual Emergency Operator</span>
-                  </div>
-                  <span className="text-[10px] text-gray-400">Contextual Triage</span>
-                </div>
-
-                {/* Chat Scrollbox */}
-                <div 
-                  ref={chatScrollRef}
-                  className="h-64 overflow-y-auto bg-[#070b14] border border-gray-800 rounded-lg p-3 space-y-3 font-sans text-xs"
-                >
-                  {chatMessages.map((msg, mIdx) => (
-                    <div 
-                      key={mIdx}
-                      className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
+                <div className="h-60 overflow-y-auto bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-3 text-xs" ref={chatScrollRef}>
+                  {chatMessages.map((msg, idx) => (
+                    <div key={idx} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                       {msg.role !== 'user' && (
-                        <div className="w-6 h-6 rounded-full bg-cyan-600/30 border border-cyan-500/40 flex items-center justify-center text-cyan-300 shrink-0 mt-0.5">
+                        <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] shrink-0 mt-0.5">
                           <Bot className="w-3.5 h-3.5" />
                         </div>
                       )}
-
-                      <div className={`p-2.5 rounded-xl max-w-[85%] leading-relaxed ${
+                      <div className={`p-3 rounded-2xl max-w-[85%] leading-relaxed ${
                         msg.role === 'user'
-                          ? 'bg-blue-600 text-white rounded-br-none'
-                          : 'bg-gray-800/90 text-gray-200 border border-gray-700/60 rounded-bl-none'
+                          ? 'bg-blue-600 text-white rounded-br-sm'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-sm shadow-sm'
                       }`}>
                         {msg.content}
                       </div>
-
                       {msg.role === 'user' && (
-                        <div className="w-6 h-6 rounded-full bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-blue-300 shrink-0 mt-0.5">
+                        <div className="w-6 h-6 rounded-full bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-[10px] shrink-0 mt-0.5">
                           <User className="w-3.5 h-3.5" />
                         </div>
                       )}
@@ -606,32 +591,30 @@ export default function Dashboard() {
                   ))}
 
                   {chatLoading && (
-                    <div className="flex items-center gap-2 text-gray-400 text-xs italic">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
-                      <span>AI Intake Operator is thinking & analyzing context...</span>
+                    <div className="flex items-center gap-2 text-slate-500 text-xs italic">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                      <span>Analyzing incident context with city telemetry...</span>
                     </div>
                   )}
                 </div>
 
-                {/* Chat Input Field */}
                 <form onSubmit={handleSendChatMessage} className="flex gap-2">
                   <input
                     type="text"
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Type message: 'a person fell down on road by bike skid'..."
-                    className="flex-1 bg-[#080d1a] border border-gray-700/60 rounded-lg px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 font-sans"
+                    placeholder="Type to intake bot: 'cyclist skidded on 5th Ave'..."
+                    className="flex-1 text-xs rounded-xl px-3 py-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                   />
                   <button
                     type="submit"
                     disabled={chatLoading || !chatInput.trim()}
-                    className="px-3 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition disabled:opacity-40"
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition disabled:opacity-40"
                   >
                     Send
                   </button>
                 </form>
 
-                {/* Hand-off to 3 Agents Button */}
                 <button
                   type="button"
                   onClick={() => {
@@ -639,77 +622,65 @@ export default function Dashboard() {
                     handleRunInvestigation(textToSend);
                   }}
                   disabled={loading || chatMessages.length < 2}
-                  className="w-full py-2.5 px-3 rounded-lg bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-950/40 transition disabled:opacity-40 cursor-pointer"
+                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition disabled:opacity-40"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Transferring to 3-Agent Dispatch Cascade...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 text-amber-300" />
-                      <span>Authorize 3-Agent Dispatch from this Chat</span>
-                    </>
-                  )}
+                  <Sparkles className="w-4 h-4" />
+                  <span>Authorize Multi-Agent Dispatch from Dialogue</span>
                 </button>
               </div>
             )}
 
           </div>
 
-          {/* 3-Agent Waterfall Stepper */}
-          <div className="bg-[#0f172a]/70 border border-gray-800/80 rounded-xl p-5 shadow-lg">
-            <h2 className="text-xs font-mono uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-emerald-400" /> Autonomous Pipeline Cascade
-            </h2>
+          {/* Process Workflow Progress */}
+          <div className="rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm p-5">
+            <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Activity className="w-4 h-4 text-blue-500" /> Multi-Agent Execution Lifecycle
+            </h3>
 
-            <div className="space-y-4 font-mono text-xs">
+            <div className="space-y-3 text-xs">
               {/* Agent 1 */}
-              <div className={`p-3 rounded-lg border transition ${
-                activeStep >= 1 ? 'border-emerald-500/40 bg-emerald-950/20 text-emerald-300' : 'border-gray-800 bg-gray-900/40 text-gray-500'
+              <div className={`p-3 rounded-xl border transition ${
+                activeStep >= 1 
+                  ? 'border-blue-200 bg-blue-50/60 dark:border-blue-800/60 dark:bg-blue-950/20 text-blue-900 dark:text-blue-300' 
+                  : 'border-slate-200 dark:border-slate-800 text-slate-400'
               }`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-bold">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-[10px]">1</span>
-                    <span>AGENT 1: DATA & OPTICAL GATHERER</span>
-                  </div>
-                  {activeStep >= 1 && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                <div className="flex items-center justify-between font-semibold">
+                  <span>1. Agent 1 — Telemetry & Visual Synthesizer</span>
+                  {activeStep >= 1 && <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
                 </div>
-                <p className="mt-1 text-[11px] text-gray-400 font-sans">
-                  Fuses live intake report with Supabase sensors (Proportional Relevance Filter).
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                  Queries PostgreSQL sensor baseline & cross-references optical inputs.
                 </p>
               </div>
 
               {/* Agent 2 */}
-              <div className={`p-3 rounded-lg border transition ${
-                activeStep >= 2 ? 'border-amber-500/40 bg-amber-950/20 text-amber-300' : 'border-gray-800 bg-gray-900/40 text-gray-500'
+              <div className={`p-3 rounded-xl border transition ${
+                activeStep >= 2 
+                  ? 'border-amber-200 bg-amber-50/60 dark:border-amber-800/60 dark:bg-amber-950/20 text-amber-900 dark:text-amber-300' 
+                  : 'border-slate-200 dark:border-slate-800 text-slate-400'
               }`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-bold">
-                    <span className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[10px]">2</span>
-                    <span>AGENT 2: RISK ANALYST</span>
-                  </div>
-                  {activeStep >= 2 && <CheckCircle2 className="w-4 h-4 text-amber-400" />}
+                <div className="flex items-center justify-between font-semibold">
+                  <span>2. Agent 2 — Infrastructure Risk Modeler</span>
+                  {activeStep >= 2 && <CheckCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />}
                 </div>
-                <p className="mt-1 text-[11px] text-gray-400 font-sans">
-                  Calculates real cascading risks (Calibrated LOW, MEDIUM, HIGH, CRITICAL).
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                  Calculates cascading impacts across power, medical corridors, and transit.
                 </p>
               </div>
 
               {/* Agent 3 */}
-              <div className={`p-3 rounded-lg border transition ${
-                activeStep >= 3 ? 'border-red-500/40 bg-red-950/20 text-red-300' : 'border-gray-800 bg-gray-900/40 text-gray-500'
+              <div className={`p-3 rounded-xl border transition ${
+                activeStep >= 3 
+                  ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-800/60 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300' 
+                  : 'border-slate-200 dark:border-slate-800 text-slate-400'
               }`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-bold">
-                    <span className="w-5 h-5 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center text-[10px]">3</span>
-                    <span>AGENT 3: CITY COMMANDER</span>
-                  </div>
-                  {activeStep >= 3 && <CheckCircle2 className="w-4 h-4 text-red-400" />}
+                <div className="flex items-center justify-between font-semibold">
+                  <span>3. Agent 3 — Incident Action Commander</span>
+                  {activeStep >= 3 && <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
                 </div>
-                <p className="mt-1 text-[11px] text-gray-400 font-sans">
-                  Authorizes proportionate 3-step action orders (EMS for falls, Hazmat for fires).
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                  Issues calibrated 3-phase tactical unit dispatches and civilian alerts.
                 </p>
               </div>
             </div>
@@ -717,126 +688,137 @@ export default function Dashboard() {
 
         </section>
 
-        {/* Right Column: Output Command Deck & Transparency Tabs (7 Cols) */}
+        {/* ==================================================== */}
+        {/* RIGHT COMMAND DECK: EXECUTIVE OUTPUTS (7 Columns)   */}
+        {/* ==================================================== */}
         <section className="lg:col-span-7 flex flex-col gap-4">
           
-          {/* Tab Selector Header */}
-          <div className="flex items-center gap-2 border-b border-gray-800 pb-2 overflow-x-auto text-xs font-mono">
+          {/* Executive Tab Header */}
+          <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto text-xs font-medium">
             <button
               onClick={() => setActiveTab('commander')}
-              className={`px-4 py-2 rounded-lg font-semibold transition ${
-                activeTab === 'commander' 
-                  ? 'bg-red-500/20 border border-red-500/50 text-red-300' 
-                  : 'text-gray-400 hover:text-gray-200'
+              className={`px-4 py-2 rounded-xl transition font-semibold ${
+                activeTab === 'commander'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Dispatch Directive (Agent 3)
+              Action Directive (Agent 3)
             </button>
             <button
               onClick={() => setActiveTab('analyst')}
-              className={`px-4 py-2 rounded-lg font-semibold transition ${
-                activeTab === 'analyst' 
-                  ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300' 
-                  : 'text-gray-400 hover:text-gray-200'
+              className={`px-4 py-2 rounded-xl transition font-semibold ${
+                activeTab === 'analyst'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Risk Assessment (Agent 2)
             </button>
             <button
               onClick={() => setActiveTab('sensors')}
-              className={`px-4 py-2 rounded-lg font-semibold transition ${
-                activeTab === 'sensors' 
-                  ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-300' 
-                  : 'text-gray-400 hover:text-gray-200'
+              className={`px-4 py-2 rounded-xl transition font-semibold ${
+                activeTab === 'sensors'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Telemetry & Visuals (Agent 1)
+              IoT Telemetry (Agent 1)
             </button>
             <button
               onClick={() => setActiveTab('raw')}
-              className={`px-4 py-2 rounded-lg font-semibold transition ${
-                activeTab === 'raw' 
-                  ? 'bg-cyan-500/20 border border-cyan-500/50 text-cyan-300' 
-                  : 'text-gray-400 hover:text-gray-200'
+              className={`px-4 py-2 rounded-xl transition font-semibold ${
+                activeTab === 'raw'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Raw Pipeline JSON
+              API Audit Log
             </button>
           </div>
 
-          {/* Error Message if any */}
+          {/* Error Message */}
           {error && (
-            <div className="p-4 rounded-xl bg-red-950/40 border border-red-600/50 text-red-300 text-sm flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 shrink-0 text-red-400 mt-0.5" />
+            <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 shrink-0 text-red-500 mt-0.5" />
               <div>
-                <p className="font-bold">Investigation Pipeline Error</p>
-                <p className="text-xs text-red-400/90 mt-1">{error}</p>
+                <p className="font-semibold">Pipeline Execution Alert</p>
+                <p className="mt-0.5 opacity-90">{error}</p>
               </div>
             </div>
           )}
 
-          {/* Empty State before running */}
+          {/* Empty State */}
           {!result && !loading && !error && (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center rounded-xl border border-gray-800/80 bg-[#0f172a]/30">
-              <ShieldAlert className="w-12 h-12 text-gray-600 mb-3" />
-              <h3 className="font-bold text-gray-300 text-base">Awaiting Emergency Dispatch Trigger</h3>
-              <p className="text-xs text-gray-500 max-w-sm mt-1">
-                Enter an incident via Direct Entry or chat with the Gemini Intake Bot on the left, then launch the investigation.
+            <div className="flex-1 min-h-[460px] flex flex-col items-center justify-center p-12 text-center rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mb-4">
+                <FileText className="w-6 h-6" />
+              </div>
+              <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">System Ready for Incident Ingestion</h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mt-1 leading-relaxed">
+                Trigger a scenario via Direct Dispatch or converse with the Gemini Intake Assistant on the left to authorize the autonomous response plan.
               </p>
             </div>
           )}
 
           {/* Loading Skeleton */}
           {loading && (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center rounded-xl border border-cyan-800/40 bg-cyan-950/10 animate-pulse">
-              <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mb-3" />
-              <h3 className="font-bold text-cyan-300 text-sm font-mono">FUSING OPTICAL FEED & SENSOR DATA...</h3>
-              <p className="text-xs text-gray-400 max-w-sm mt-1">
-                Data Gatherer is checking Supabase relevance, Analyst is determining proportionate risks, Commander is drafting targeted dispatch orders.
+            <div className="flex-1 min-h-[460px] flex flex-col items-center justify-center p-12 text-center rounded-2xl border bg-blue-50/30 dark:bg-blue-950/10 border-blue-200 dark:border-blue-900/40">
+              <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-3" />
+              <h4 className="font-semibold text-blue-900 dark:text-blue-300 text-sm">Autonomous Multi-Agent Cascade in Progress</h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mt-1">
+                Data Gatherer is querying Supabase, Risk Analyst is modeling cascading failure trees, and Command Dispatcher is drafting tactical orders.
               </p>
             </div>
           )}
 
-          {/* TAB 1: Commander Final 3-Step Dispatch Orders */}
+          {/* TAB 1: Commander Directive */}
           {result && activeTab === 'commander' && agent3 && (
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-red-950/30 border border-red-500/40 flex items-center justify-between">
+              
+              {/* Executive Header Card */}
+              <div className="p-5 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <span className="text-[10px] font-mono tracking-widest uppercase text-red-400 font-bold">Commander Directive Authorized</span>
-                  <h2 className="text-base font-bold text-white mt-0.5">{agent3.directive_title}</h2>
+                  <span className="text-[10px] font-semibold tracking-wider uppercase text-blue-600 dark:text-blue-400">
+                    Executive Action Plan Authorized
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
+                    {agent3.directive_title}
+                  </h3>
                 </div>
-                <span className={`px-3 py-1 rounded font-mono text-xs font-bold uppercase tracking-wider ${
-                  agent3.threat_level === 'CRITICAL' ? 'bg-red-600 text-white' :
-                  agent3.threat_level === 'HIGH' ? 'bg-orange-600 text-white' :
-                  agent3.threat_level === 'MEDIUM' ? 'bg-amber-600 text-white' : 'bg-emerald-600 text-white'
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
+                  agent3.threat_level === 'CRITICAL' ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border border-red-200 dark:border-red-800' :
+                  agent3.threat_level === 'HIGH' ? 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 border border-orange-200 dark:border-orange-800' :
+                  agent3.threat_level === 'MEDIUM' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800' :
+                  'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                 }`}>
-                  THREAT: {agent3.threat_level || 'ROUTINE'}
+                  Priority: {agent3.threat_level || 'ROUTINE'}
                 </span>
               </div>
 
-              {/* 3 Step Dispatch Plan Cards */}
+              {/* 3 Action Phases */}
               <div className="space-y-3">
-                {agent3.three_step_dispatch_plan?.map((stepItem, i) => (
-                  <div key={i} className="p-4 rounded-xl bg-[#0f172a]/80 border border-gray-800 shadow-md flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-red-500/20 text-red-400 border border-red-500/40 flex items-center justify-center text-xs font-bold font-mono">
-                          {stepItem.step || i + 1}
-                        </span>
-                        <h4 className="text-sm font-bold text-gray-200">{stepItem.title}</h4>
+                {agent3.three_step_dispatch_plan?.map((stepItem, idx) => (
+                  <div key={idx} className="p-4 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold text-xs flex items-center justify-center shrink-0">
+                        {stepItem.step || idx + 1}
                       </div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                        {stepItem.title}
+                      </h4>
                     </div>
 
-                    <p className="text-xs text-gray-300 leading-relaxed pl-8">
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed pl-8.5">
                       {stepItem.action_orders}
                     </p>
 
                     {stepItem.units_dispatched?.length > 0 && (
-                      <div className="pl-8 pt-2 flex flex-wrap items-center gap-1.5">
-                        <span className="text-[10px] font-mono uppercase text-gray-500 mr-1">Units Dispatched:</span>
-                        {stepItem.units_dispatched.map((unit, uIdx) => (
-                          <span key={uIdx} className="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-800 border border-gray-700 text-cyan-300">
-                            {unit}
+                      <div className="pl-8.5 pt-1.5 flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] font-medium text-slate-400">Deployed Units:</span>
+                        {stepItem.units_dispatched.map((u, uIdx) => (
+                          <span key={uIdx} className="text-[10px] font-medium px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                            {u}
                           </span>
                         ))}
                       </div>
@@ -845,47 +827,56 @@ export default function Dashboard() {
                 ))}
               </div>
 
-              {/* Public Broadcast Box */}
+              {/* Civilian Advisory Banner */}
               {agent3.public_broadcast_alert && (
-                <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-500/30 text-amber-200 flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-amber-400">
-                    <Radio className="w-4 h-4" /> PUBLIC CIVILIAN ADVISORY
+                <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-3">
+                  <Radio className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold block text-[11px] uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                      Public Communications Advisory
+                    </span>
+                    <p className="mt-1 leading-relaxed italic text-slate-700 dark:text-slate-300">
+                      &ldquo;{agent3.public_broadcast_alert}&rdquo;
+                    </p>
                   </div>
-                  <p className="text-xs leading-relaxed italic text-amber-200/90">
-                    &ldquo;{agent3.public_broadcast_alert}&rdquo;
-                  </p>
                 </div>
               )}
             </div>
           )}
 
-          {/* TAB 2: Analyst Cascading Risk Tree */}
+          {/* TAB 2: Analyst Risk Tree */}
           {result && activeTab === 'analyst' && agent2 && (
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-500/40 flex items-center justify-between">
+              <div className="p-5 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-mono tracking-widest uppercase text-amber-400 font-bold">Agent 2 Risk Assessment</span>
-                  <h3 className="text-sm font-bold text-white mt-0.5">Cascading Infrastructure Vulnerabilities</h3>
+                  <span className="text-[10px] font-semibold tracking-wider uppercase text-amber-600 dark:text-amber-400">
+                    Agent 2 Risk Modeling
+                  </span>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">Cascading Infrastructure Vulnerability Tree</h3>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] font-mono text-gray-400 block">Critical Window</span>
-                  <span className="text-xs font-mono font-bold text-amber-300">{agent2.time_to_critical_failure}</span>
+                  <span className="text-[10px] text-slate-400 block font-medium">Critical Threshold Window</span>
+                  <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">{agent2.time_to_critical_failure}</span>
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-[#0f172a] border border-gray-800">
-                <h4 className="text-xs font-mono uppercase text-gray-400 mb-2">Strategic Assessment</h4>
-                <p className="text-xs text-gray-300 leading-relaxed">{agent2.analyst_assessment}</p>
+              <div className="p-4 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm text-xs">
+                <span className="font-semibold text-slate-500 uppercase tracking-wider text-[10px] block mb-1">
+                  Strategic Assessment
+                </span>
+                <p className="text-slate-700 dark:text-slate-300 leading-relaxed">{agent2.analyst_assessment}</p>
               </div>
 
               <div className="space-y-2">
-                <h4 className="text-xs font-mono uppercase text-gray-400">Cascading Failures Identified</h4>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                  Identified Impact Vectors
+                </span>
                 {agent2.cascading_vulnerabilities?.map((vuln, vIdx) => (
-                  <div key={vIdx} className="p-3 rounded-lg bg-gray-900/60 border border-gray-800 flex items-start gap-3">
-                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div key={vIdx} className="p-3.5 rounded-xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-start gap-3">
+                    <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                     <div>
-                      <span className="text-xs font-bold text-amber-300">{vuln.system}</span>
-                      <p className="text-xs text-gray-300 mt-0.5">{vuln.risk}</p>
+                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{vuln.system}</span>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{vuln.risk}</p>
                     </div>
                   </div>
                 ))}
@@ -893,67 +884,72 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* TAB 3: Agent 1 Sensor Telemetry & Visual Surveillance Summary */}
+          {/* TAB 3: Telemetry & Vision */}
           {result && activeTab === 'sensors' && agent1 && (
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/40">
+              <div className="p-5 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-mono tracking-widest uppercase text-emerald-400 font-bold">Agent 1 Ground-Truth</span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-500/30">
-                    {agent1.incident_classification || 'ASSESSED'}
+                  <span className="text-[10px] font-semibold tracking-wider uppercase text-blue-600 dark:text-blue-400">
+                    Agent 1 Ingestion Audit
+                  </span>
+                  <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                    {agent1.incident_classification || 'EVALUATED'}
                   </span>
                 </div>
-                <h3 className="text-sm font-bold text-white mt-0.5">Database & Optical Fusion Summary</h3>
-                <p className="text-xs text-gray-300 mt-2 leading-relaxed">{agent1.data_synthesis}</p>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">IoT Telemetry & Optical Fusion Dossier</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">{agent1.data_synthesis}</p>
               </div>
 
               {agent1.visual_surveillance_analysis && (
-                <div className="p-4 rounded-xl bg-cyan-950/20 border border-cyan-500/40">
-                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-cyan-400 mb-1.5">
-                    <Eye className="w-4 h-4" /> Optical Surveillance Corroboration
+                <div className="p-4 rounded-2xl border bg-cyan-50/50 dark:bg-cyan-950/20 border-cyan-200 dark:border-cyan-800/60 text-xs">
+                  <div className="flex items-center gap-2 font-semibold text-cyan-700 dark:text-cyan-300 mb-1">
+                    <Eye className="w-4 h-4" /> Optical Corroboration Findings
                   </div>
-                  <p className="text-xs text-cyan-200 leading-relaxed">
+                  <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
                     {agent1.visual_surveillance_analysis}
                   </p>
                 </div>
               )}
 
               <div className="space-y-2">
-                <h4 className="text-xs font-mono uppercase text-gray-400">Critical Sensors Flagged in Supabase</h4>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                  Relevant IoT Baseline Corroboration
+                </span>
                 {agent1.critical_sensors?.length > 0 ? (
                   agent1.critical_sensors.map((sens, sIdx) => (
-                    <div key={sIdx} className="p-3 rounded-lg bg-gray-900/60 border border-gray-800 flex items-center justify-between">
+                    <div key={sIdx} className="p-3.5 rounded-xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-cyan-400">{sens.id}</span>
-                          <span className="text-xs text-gray-200">{sens.name}</span>
+                          <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{sens.id}</span>
+                          <span className="text-xs font-medium text-slate-800 dark:text-slate-200">{sens.name}</span>
                         </div>
-                        <p className="text-[11px] text-gray-400 mt-0.5">{sens.telemetry_finding}</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">{sens.telemetry_finding}</p>
                       </div>
-                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
-                        sens.status === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
+                        sens.status === 'CRITICAL' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800' :
+                        'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
                       }`}>
                         {sens.status}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-gray-500 italic p-3 bg-gray-900/30 rounded-lg border border-gray-800">
-                    No anomalous city sensors correlate with this localized incident.
+                  <p className="text-xs text-slate-500 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 italic">
+                    Baseline sensors within normal operational tolerances. No anomalous infrastructure correlation.
                   </p>
                 )}
               </div>
             </div>
           )}
 
-          {/* TAB 4: Raw JSON Handoff (Proof for Judges) */}
+          {/* TAB 4: Developer Raw JSON */}
           {result && activeTab === 'raw' && (
-            <div className="bg-[#050811] rounded-xl border border-gray-800 p-4 font-mono text-[11px] overflow-auto max-h-[600px] text-emerald-400">
-              <div className="flex items-center justify-between pb-2 mb-3 border-b border-gray-800 text-gray-400">
-                <span className="flex items-center gap-2 text-xs font-bold text-gray-300">
-                  <Terminal className="w-4 h-4 text-cyan-400" /> Transparent Pipeline Payloads
+            <div className="rounded-2xl border bg-slate-900 border-slate-800 p-4 font-mono text-[11px] overflow-auto max-h-[560px] text-emerald-400 shadow-sm">
+              <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-800 text-slate-400 text-xs">
+                <span className="flex items-center gap-2 font-semibold text-slate-300">
+                  <Terminal className="w-4 h-4 text-blue-400" /> Transparent Agent Handoff Payloads
                 </span>
-                <span className="text-[10px] text-gray-500">Pure sequential fetch()</span>
+                <span>Deterministic Sequential fetch()</span>
               </div>
               <pre>{JSON.stringify(result, null, 2)}</pre>
             </div>
