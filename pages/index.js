@@ -170,7 +170,9 @@ export default function Dashboard() {
     setIsVideoMedia(false);
     stopWebcam();
     setMediaSource('upload');
-    setActiveCameraLabel("CAPTURED EVIDENCE // LOCAL TERMINAL");
+    const label = "CAPTURED EVIDENCE // LOCAL TERMINAL";
+    setActiveCameraLabel(label);
+    setIncidentText("Live camera snapshot captured. Local street scene documented for visual verification and local dispatch.");
   };
 
   const stopWebcam = () => {
@@ -189,7 +191,9 @@ export default function Dashboard() {
     const isVideo = file.type.startsWith('video/');
     setIsVideoMedia(isVideo);
     setMediaSource('upload');
-    setActiveCameraLabel(`EVIDENCE FILE: ${file.name}`);
+    const label = `EVIDENCE FILE: ${file.name}`;
+    setActiveCameraLabel(label);
+    setIncidentText(`Field optical evidence submitted (${file.name}). Local vehicle/incident documented on roadway. Dispatch local units.`);
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -466,7 +470,12 @@ export default function Dashboard() {
               </div>
               <button
                 type="button"
-                onClick={() => handleRunInvestigation()}
+                onClick={() => {
+                  const textToSend = incidentText && incidentText.trim() 
+                    ? incidentText 
+                    : `Field optical evidence submitted (${activeCameraLabel}). Local vehicle/incident documented on roadway. Verify scene and deploy appropriate local units.`;
+                  handleRunInvestigation(textToSend);
+                }}
                 disabled={loading}
                 className="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition disabled:opacity-40"
               >
