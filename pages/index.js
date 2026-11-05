@@ -135,6 +135,7 @@ export default function Dashboard() {
   const streamRef = useRef(null);
   const fileInputRef = useRef(null);
   const chatScrollRef = useRef(null);
+  const chatInputRef = useRef(null);
 
   useEffect(() => {
     const updateTime = () => {
@@ -206,6 +207,14 @@ export default function Dashboard() {
           const synthesizedText = ana.suggested_incident_text || `Field visual evidence (${label}): ${ana.scene_description}`;
           setIncidentText(synthesizedText);
           setActiveDossier(synthesizedText);
+          setChatMessages(prev => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: `Optical evidence analyzed (${label}): ${ana.scene_description}. Action plan formulated below.`,
+              dossier: synthesizedText
+            }
+          ]);
         }
       }
     } catch (err) {
@@ -288,7 +297,14 @@ export default function Dashboard() {
         throw new Error(data.error || 'Chat assistant failed');
       }
 
-      setChatMessages([...newHistory, { role: 'assistant', content: data.message }]);
+      setChatMessages([
+        ...newHistory, 
+        { 
+          role: 'assistant', 
+          content: data.message,
+          dossier: data.synthesizedIncident || null
+        }
+      ]);
       if (data.synthesizedIncident) {
         setActiveDossier(data.synthesizedIncident);
         setIncidentText(data.synthesizedIncident);
@@ -647,34 +663,53 @@ export default function Dashboard() {
               </div>
 
               {/* Dynamic Dispatch Button */}
-              <div className="flex items-center justify-between pt-1">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                 <span className="text-[11px] font-medium text-slate-500">
                   {opticalScenario === 'safe' ? '🟢 Harmless: Triggers Green Light All Clear' :
                    opticalScenario === 'minor' ? '🟡 Minor Incident: Triggers Routine EMS' :
                    '🔴 Crisis: Triggers Hazmat & Evacuation'}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const textToSend = incidentText && incidentText.trim()
-                      ? incidentText
-                      : (opticalScenario === 'safe'
-                          ? `Field optical evidence submitted (${activeCameraLabel}). Stationary parked vehicle / harmless street scene observed. Zero collisions, zero casualties, zero fire/leak hazard. Authorize All Clear green-light status.`
-                          : `Field optical evidence submitted (${activeCameraLabel}). Minor vehicle incident documented on roadway. Deploy local EMS.`);
-                    handleRunInvestigation(textToSend);
-                  }}
-                  disabled={loading}
-                  className={`px-3.5 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1.5 shadow-sm transition disabled:opacity-40 text-white ${
-                    opticalScenario === 'safe'
-                      ? 'bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500'
-                      : opticalScenario === 'minor'
-                      ? 'bg-amber-700 hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500'
-                      : 'bg-red-700 hover:bg-red-800 dark:bg-red-600 dark:hover:bg-red-500'
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-                  <span>Dispatch Agents with this Scenario</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const textToSend = incidentText && incidentText.trim()
+                        ? incidentText
+                        : (opticalScenario === 'safe'
+                            ? `Field optical evidence submitted (${activeCameraLabel}). Stationary parked vehicle / harmless street scene observed. Zero collisions, zero casualties, zero fire/leak hazard.`
+                            : `Field optical evidence submitted (${activeCameraLabel}). Minor vehicle incident documented on roadway.`);
+                      setChatInput(textToSend);
+                      chatInputRef.current?.focus();
+                    }}
+                    className="px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition cursor-pointer"
+                    title="Send scenario text to AI Assistant intake"
+                  >
+                    <Bot className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Send to AI</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const textToSend = incidentText && incidentText.trim()
+                        ? incidentText
+                        : (opticalScenario === 'safe'
+                            ? `Field optical evidence submitted (${activeCameraLabel}). Stationary parked vehicle / harmless street scene observed. Zero collisions, zero casualties, zero fire/leak hazard. Authorize All Clear green-light status.`
+                            : `Field optical evidence submitted (${activeCameraLabel}). Minor vehicle incident documented on roadway. Deploy local EMS.`);
+                      handleRunInvestigation(textToSend);
+                    }}
+                    disabled={loading}
+                    className={`px-3.5 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1.5 shadow-sm transition disabled:opacity-40 text-white cursor-pointer ${
+                      opticalScenario === 'safe'
+                        ? 'bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500'
+                        : opticalScenario === 'minor'
+                        ? 'bg-amber-700 hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500'
+                        : 'bg-red-700 hover:bg-red-800 dark:bg-red-600 dark:hover:bg-red-500'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                    <span>Authorize & Deploy Multi-Agent Cascade</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -721,7 +756,7 @@ export default function Dashboard() {
 
             {/* Conversational Assistant */}
             <div className="flex flex-col gap-3">
-              <div className="h-64 overflow-y-auto bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-3 text-xs" ref={chatScrollRef}>
+              <div className="h-64 overflow-y-auto bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-3.5 text-xs" ref={chatScrollRef}>
                 {chatMessages.map((msg, idx) => (
                   <div key={idx} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     {msg.role !== 'user' && (
@@ -729,13 +764,50 @@ export default function Dashboard() {
                         <Bot className="w-3.5 h-3.5" />
                       </div>
                     )}
-                    <div className={`p-3 rounded-2xl max-w-[85%] leading-relaxed ${
-                      msg.role === 'user'
-                        ? 'bg-slate-900 text-white dark:bg-blue-600 rounded-br-sm shadow-xs'
-                        : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-bl-sm shadow-xs'
-                    }`}>
-                      {msg.content}
+                    <div className={`flex flex-col gap-2 max-w-[85%]`}>
+                      <div className={`p-3 rounded-2xl leading-relaxed ${
+                        msg.role === 'user'
+                          ? 'bg-slate-900 text-white dark:bg-blue-600 rounded-br-sm shadow-xs'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-bl-sm shadow-xs'
+                      }`}>
+                        {msg.content}
+                      </div>
+
+                      {/* Action Handoff Card right after conversation response */}
+                      {msg.dossier && (
+                        <div className="p-3 rounded-xl bg-slate-100/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 space-y-2 text-xs shadow-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Incident Solution Ready
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">Action Plan Ready</span>
+                          </div>
+                          <p className="text-[11px] text-slate-800 dark:text-slate-200 italic leading-relaxed bg-white/80 dark:bg-slate-950/70 p-2 rounded-lg border border-slate-200/60 dark:border-slate-800">
+                            &ldquo;{msg.dossier}&rdquo;
+                          </p>
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleRunInvestigation(msg.dossier)}
+                              disabled={loading}
+                              className="flex-1 py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-[11px] flex items-center justify-center gap-1.5 shadow-sm transition disabled:opacity-40 cursor-pointer"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                              <span>Authorize & Deploy Multi-Agent Cascade</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => chatInputRef.current?.focus()}
+                              className="py-1.5 px-3 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-[11px] flex items-center justify-center gap-1.5 border border-slate-300 dark:border-slate-600 transition cursor-pointer"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span>Send to AI (Refine)</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
+
                     {msg.role === 'user' && (
                       <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-[10px] shrink-0 mt-0.5">
                         <User className="w-3.5 h-3.5" />
@@ -754,35 +826,56 @@ export default function Dashboard() {
 
               {/* Ready Incident Dossier Card */}
               {activeDossier && (
-                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/80 text-xs">
-                  <div className="flex items-center justify-between mb-1">
+                <div className="p-3.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/80 text-xs space-y-2">
+                  <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Incident Dossier Synthesized
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Synthesized Solution Dossier
                     </span>
                     <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400">Ready for Dispatch</span>
                   </div>
-                  <p className="text-emerald-950 dark:text-emerald-100 italic leading-relaxed">
+                  <p className="text-emerald-950 dark:text-emerald-100 italic leading-relaxed text-xs">
                     &ldquo;{activeDossier}&rdquo;
                   </p>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleRunInvestigation(activeDossier)}
+                      disabled={loading}
+                      className="flex-1 py-2 px-3 rounded-lg bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm transition disabled:opacity-40 cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                      <span>Authorize & Deploy Multi-Agent Emergency Cascade</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => chatInputRef.current?.focus()}
+                      className="py-2 px-3 rounded-lg bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 hover:bg-emerald-100/60 dark:hover:bg-slate-800 font-semibold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Send to AI (Refine)</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
               {/* Chat Input Bar */}
               <form onSubmit={handleSendChatMessage} className="flex gap-2">
                 <input
+                  ref={chatInputRef}
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Describe incident or ask AI (e.g. 'cyclist collision on 5th Ave', 'gas leak near substation')..."
+                  placeholder="Describe incident or refine with AI (e.g. 'cyclist collision on 5th Ave', 'send EMS')..."
                   className="flex-1 text-xs rounded-xl px-3 py-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-blue-500/40"
                 />
                 <button
                   type="submit"
                   disabled={chatLoading || !chatInput.trim()}
-                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-xs transition disabled:opacity-40 flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-xs transition disabled:opacity-40 flex items-center gap-1.5 cursor-pointer shrink-0"
+                  title="Send input to AI assistant"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>Send</span>
+                  <span>Send to AI</span>
                 </button>
               </form>
 
@@ -790,7 +883,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => {
-                  const textToSend = activeDossier || chatMessages[chatMessages.length - 1]?.content || incidentText;
+                  const textToSend = activeDossier || chatMessages.slice().reverse().find(m => m.dossier)?.dossier || chatMessages[chatMessages.length - 1]?.content || incidentText;
                   handleRunInvestigation(textToSend);
                 }}
                 disabled={loading || (chatMessages.length < 2 && !activeDossier && !incidentText)}

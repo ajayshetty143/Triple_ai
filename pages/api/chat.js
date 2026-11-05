@@ -90,12 +90,14 @@ YOUR OBJECTIVES:
     }
 
     // Check if an incident dossier was generated
-    const dossierMatch = replyContent.match(/\[INCIDENT DOSSIER READY:\s*"([^"]+)"\]/i);
-    const synthesizedIncident = dossierMatch ? dossierMatch[1] : null;
+    const dossierMatch = replyContent.match(/\[INCIDENT DOSSIER READY:\s*["']?([\s\S]*?)["']?\]/i);
+    const synthesizedIncident = dossierMatch ? dossierMatch[1].trim() : null;
+    const cleanMessage = replyContent.replace(/\[INCIDENT DOSSIER READY:[\s\S]*?\]/gi, '').trim();
 
     return res.status(200).json({
       success: true,
-      message: replyContent,
+      message: cleanMessage || replyContent,
+      rawMessage: replyContent,
       synthesizedIncident: synthesizedIncident,
     });
   } catch (error) {
