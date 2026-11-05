@@ -70,8 +70,17 @@ const PRESET_SCENARIOS = [
 ];
 
 export default function Dashboard() {
-  // Theme state: dark / light
+  // Theme state: default to dark, toggles html class 'dark'
   const [isDark, setIsDark] = useState(true);
+
+  // Sync theme with document class
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDark]);
 
   // Input Mode: 'quick' (CAD entry) or 'chat' (Gemini-style Conversational Triage)
   const [inputMode, setInputMode] = useState('quick'); 
@@ -110,7 +119,7 @@ export default function Dashboard() {
   const fileInputRef = useRef(null);
   const chatScrollRef = useRef(null);
 
-  // Live HUD clock
+  // Live clock
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -281,25 +290,25 @@ export default function Dashboard() {
   const agent3 = result?.pipeline?.agent3_city_commander;
 
   return (
-    <div className={`min-h-screen transition-colors duration-200 font-sans ${isDark ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+    <div className="min-h-screen transition-colors duration-200 font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       <Head>
         <title>METROPOLIS // Autonomous Emergency Incident Platform</title>
         <meta name="description" content="Enterprise Smart City Incident Orchestration System" />
       </Head>
 
       {/* Corporate Top Navigation Bar */}
-      <header className="border-b sticky top-0 z-50 backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 transition-colors">
+      <header className="border-b sticky top-0 z-50 backdrop-blur-md bg-white/95 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 transition-colors shadow-sm dark:shadow-none">
         <div className="max-w-7xl mx-auto px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
           
           {/* Logo & Brand Identity */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+            <div className="w-10 h-10 rounded-xl bg-slate-900 dark:bg-gradient-to-tr dark:from-blue-600 dark:via-indigo-600 dark:to-cyan-500 flex items-center justify-center text-white shadow-sm">
               <Building2 className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-base tracking-tight font-sans">Metropolis Command OS</span>
-                <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-medium">
+                <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">Metropolis Command OS</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                   Enterprise v2.4
                 </span>
               </div>
@@ -314,12 +323,12 @@ export default function Dashboard() {
             
             {/* System Status Badges */}
             <div className="hidden sm:flex items-center gap-2 text-xs font-medium">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-slate-100/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-300">
-                <Database className="w-3.5 h-3.5 text-emerald-500" />
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 shadow-xs">
+                <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Supabase Cloud</span>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-slate-100/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-300">
-                <Cpu className="w-3.5 h-3.5 text-blue-500" />
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 shadow-xs">
+                <Cpu className="w-3.5 h-3.5 text-slate-700 dark:text-blue-400" />
                 <span>Groq LPU Engine</span>
               </div>
               {result?.meta?.execution_time_ms && (
@@ -334,10 +343,10 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={() => setIsDark(!isDark)}
-              className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition shadow-sm"
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition shadow-sm"
               title="Toggle Theme"
             >
-              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
             </button>
           </div>
         </div>
@@ -353,10 +362,10 @@ export default function Dashboard() {
 
           {/* Surveillance & Optical Feed Card */}
           <div className="rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
-            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-900/60">
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/60">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                   {activeCameraLabel}
                 </span>
               </div>
@@ -400,7 +409,7 @@ export default function Dashboard() {
             </div>
 
             {/* Video Controls */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-950/40 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+            <div className="p-3 bg-white dark:bg-slate-950/40 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 {isWebcamActive ? (
                   <button
@@ -415,9 +424,9 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={startWebcam}
-                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/80 font-medium flex items-center gap-1.5 transition text-xs shadow-sm"
+                    className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium flex items-center gap-1.5 transition text-xs shadow-xs"
                   >
-                    <Video className="w-3.5 h-3.5 text-blue-500" />
+                    <Video className="w-3.5 h-3.5 text-slate-700 dark:text-blue-400" />
                     <span>Terminal Cam</span>
                   </button>
                 )}
@@ -425,9 +434,9 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/80 font-medium flex items-center gap-1.5 transition text-xs shadow-sm"
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium flex items-center gap-1.5 transition text-xs shadow-xs"
                 >
-                  <Upload className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                  <Upload className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
                   <span>Upload Media</span>
                 </button>
                 <input 
@@ -448,7 +457,7 @@ export default function Dashboard() {
                   setActiveCameraLabel(PRESET_SCENARIOS[0].cctvId);
                   setIsVideoMedia(false);
                 }}
-                className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1"
+                className="text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-1"
                 title="Reset to Municipal Feeds"
               >
                 <RefreshCw className="w-3 h-3" />
@@ -462,7 +471,7 @@ export default function Dashboard() {
             
             {/* Mode Switcher Tabs */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                 Intake Channel
               </span>
               <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-medium">
@@ -486,7 +495,7 @@ export default function Dashboard() {
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <Bot className="w-3.5 h-3.5 text-blue-500" />
+                  <Bot className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   <span>Gemini Assistant</span>
                 </button>
               </div>
@@ -497,7 +506,7 @@ export default function Dashboard() {
               <div className="space-y-4">
                 {/* Presets Grid */}
                 <div className="space-y-2">
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
                     Select Standard Crisis Profile:
                   </span>
                   <div className="grid grid-cols-1 gap-2">
@@ -506,14 +515,14 @@ export default function Dashboard() {
                         key={i}
                         type="button"
                         onClick={() => selectScenario(sc)}
-                        className="text-left p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition flex items-center justify-between group"
+                        className="text-left p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition flex items-center justify-between group bg-white dark:bg-slate-900 shadow-xs"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 group-hover:bg-blue-600 group-hover:text-white transition">
+                          <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 group-hover:bg-slate-900 group-hover:text-white dark:group-hover:bg-blue-600 transition">
                             <sc.icon className="w-4 h-4" />
                           </div>
                           <div>
-                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{sc.title}</p>
+                            <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">{sc.title}</p>
                             <span className="text-[10px] text-slate-500 dark:text-slate-400">{sc.category}</span>
                           </div>
                         </div>
@@ -528,10 +537,10 @@ export default function Dashboard() {
                 {/* Input Textarea */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label htmlFor="incidentText" className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                    <label htmlFor="incidentText" className="text-xs font-medium text-slate-700 dark:text-slate-300">
                       Incident Brief / Custom Report:
                     </label>
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Proportional Response Active</span>
+                    <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">Proportional Response Active</span>
                   </div>
                   <textarea
                     id="incidentText"
@@ -539,7 +548,7 @@ export default function Dashboard() {
                     value={incidentText}
                     onChange={(e) => setIncidentText(e.target.value)}
                     placeholder="Enter incident description (e.g., 'a person fell down on road by bike skid' or 'substation fire')..."
-                    className="w-full text-xs rounded-xl p-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition resize-none leading-relaxed"
+                    className="w-full text-xs rounded-xl p-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-blue-500/40 transition resize-none leading-relaxed"
                   />
                 </div>
 
@@ -547,7 +556,7 @@ export default function Dashboard() {
                   type="button"
                   onClick={() => handleRunInvestigation()}
                   disabled={loading || !incidentText.trim()}
-                  className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {loading ? (
                     <>
@@ -571,19 +580,19 @@ export default function Dashboard() {
                   {chatMessages.map((msg, idx) => (
                     <div key={idx} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                       {msg.role !== 'user' && (
-                        <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+                        <div className="w-6 h-6 rounded-full bg-slate-900 text-white dark:bg-blue-600 flex items-center justify-center text-[10px] shrink-0 mt-0.5">
                           <Bot className="w-3.5 h-3.5" />
                         </div>
                       )}
                       <div className={`p-3 rounded-2xl max-w-[85%] leading-relaxed ${
                         msg.role === 'user'
-                          ? 'bg-blue-600 text-white rounded-br-sm'
-                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-sm shadow-sm'
+                          ? 'bg-slate-900 text-white dark:bg-blue-600 rounded-br-sm'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-bl-sm shadow-xs'
                       }`}>
                         {msg.content}
                       </div>
                       {msg.role === 'user' && (
-                        <div className="w-6 h-6 rounded-full bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+                        <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-[10px] shrink-0 mt-0.5">
                           <User className="w-3.5 h-3.5" />
                         </div>
                       )}
@@ -592,7 +601,7 @@ export default function Dashboard() {
 
                   {chatLoading && (
                     <div className="flex items-center gap-2 text-slate-500 text-xs italic">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-700 dark:text-blue-500" />
                       <span>Analyzing incident context with city telemetry...</span>
                     </div>
                   )}
@@ -604,12 +613,12 @@ export default function Dashboard() {
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     placeholder="Type to intake bot: 'cyclist skidded on 5th Ave'..."
-                    className="flex-1 text-xs rounded-xl px-3 py-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                    className="flex-1 text-xs rounded-xl px-3 py-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-blue-500/40"
                   />
                   <button
                     type="submit"
                     disabled={chatLoading || !chatInput.trim()}
-                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition disabled:opacity-40"
+                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-xs transition disabled:opacity-40"
                   >
                     Send
                   </button>
@@ -622,7 +631,7 @@ export default function Dashboard() {
                     handleRunInvestigation(textToSend);
                   }}
                   disabled={loading || chatMessages.length < 2}
-                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition disabled:opacity-40"
+                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition disabled:opacity-40"
                 >
                   <Sparkles className="w-4 h-4" />
                   <span>Authorize Multi-Agent Dispatch from Dialogue</span>
@@ -634,22 +643,22 @@ export default function Dashboard() {
 
           {/* Process Workflow Progress */}
           <div className="rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm p-5">
-            <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-blue-500" /> Multi-Agent Execution Lifecycle
+            <h3 className="text-xs font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Activity className="w-4 h-4 text-slate-700 dark:text-blue-500" /> Multi-Agent Execution Lifecycle
             </h3>
 
             <div className="space-y-3 text-xs">
               {/* Agent 1 */}
               <div className={`p-3 rounded-xl border transition ${
                 activeStep >= 1 
-                  ? 'border-blue-200 bg-blue-50/60 dark:border-blue-800/60 dark:bg-blue-950/20 text-blue-900 dark:text-blue-300' 
+                  ? 'border-slate-300 bg-slate-100/70 dark:border-blue-800/60 dark:bg-blue-950/20 text-slate-900 dark:text-blue-300' 
                   : 'border-slate-200 dark:border-slate-800 text-slate-400'
               }`}>
                 <div className="flex items-center justify-between font-semibold">
                   <span>1. Agent 1 — Telemetry & Visual Synthesizer</span>
-                  {activeStep >= 1 && <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
+                  {activeStep >= 1 && <CheckCircle className="w-4 h-4 text-slate-900 dark:text-blue-400" />}
                 </div>
-                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-400 font-normal">
                   Queries PostgreSQL sensor baseline & cross-references optical inputs.
                 </p>
               </div>
@@ -657,14 +666,14 @@ export default function Dashboard() {
               {/* Agent 2 */}
               <div className={`p-3 rounded-xl border transition ${
                 activeStep >= 2 
-                  ? 'border-amber-200 bg-amber-50/60 dark:border-amber-800/60 dark:bg-amber-950/20 text-amber-900 dark:text-amber-300' 
+                  ? 'border-amber-200 bg-amber-50/70 dark:border-amber-800/60 dark:bg-amber-950/20 text-amber-900 dark:text-amber-300' 
                   : 'border-slate-200 dark:border-slate-800 text-slate-400'
               }`}>
                 <div className="flex items-center justify-between font-semibold">
                   <span>2. Agent 2 — Infrastructure Risk Modeler</span>
                   {activeStep >= 2 && <CheckCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />}
                 </div>
-                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-400 font-normal">
                   Calculates cascading impacts across power, medical corridors, and transit.
                 </p>
               </div>
@@ -672,14 +681,14 @@ export default function Dashboard() {
               {/* Agent 3 */}
               <div className={`p-3 rounded-xl border transition ${
                 activeStep >= 3 
-                  ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-800/60 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300' 
+                  ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-800/60 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300' 
                   : 'border-slate-200 dark:border-slate-800 text-slate-400'
               }`}>
                 <div className="flex items-center justify-between font-semibold">
                   <span>3. Agent 3 — Incident Action Commander</span>
                   {activeStep >= 3 && <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
                 </div>
-                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-400 font-normal">
                   Issues calibrated 3-phase tactical unit dispatches and civilian alerts.
                 </p>
               </div>
@@ -699,7 +708,7 @@ export default function Dashboard() {
               onClick={() => setActiveTab('commander')}
               className={`px-4 py-2 rounded-xl transition font-semibold ${
                 activeTab === 'commander'
-                  ? 'bg-blue-600 text-white shadow-sm'
+                  ? 'bg-slate-900 text-white dark:bg-blue-600 shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -709,7 +718,7 @@ export default function Dashboard() {
               onClick={() => setActiveTab('analyst')}
               className={`px-4 py-2 rounded-xl transition font-semibold ${
                 activeTab === 'analyst'
-                  ? 'bg-blue-600 text-white shadow-sm'
+                  ? 'bg-slate-900 text-white dark:bg-blue-600 shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -719,7 +728,7 @@ export default function Dashboard() {
               onClick={() => setActiveTab('sensors')}
               className={`px-4 py-2 rounded-xl transition font-semibold ${
                 activeTab === 'sensors'
-                  ? 'bg-blue-600 text-white shadow-sm'
+                  ? 'bg-slate-900 text-white dark:bg-blue-600 shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -729,7 +738,7 @@ export default function Dashboard() {
               onClick={() => setActiveTab('raw')}
               className={`px-4 py-2 rounded-xl transition font-semibold ${
                 activeTab === 'raw'
-                  ? 'bg-blue-600 text-white shadow-sm'
+                  ? 'bg-slate-900 text-white dark:bg-blue-600 shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -751,7 +760,7 @@ export default function Dashboard() {
           {/* Empty State */}
           {!result && !loading && !error && (
             <div className="flex-1 min-h-[460px] flex flex-col items-center justify-center p-12 text-center rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center mb-4">
                 <FileText className="w-6 h-6" />
               </div>
               <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">System Ready for Incident Ingestion</h4>
@@ -763,10 +772,10 @@ export default function Dashboard() {
 
           {/* Loading Skeleton */}
           {loading && (
-            <div className="flex-1 min-h-[460px] flex flex-col items-center justify-center p-12 text-center rounded-2xl border bg-blue-50/30 dark:bg-blue-950/10 border-blue-200 dark:border-blue-900/40">
-              <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-3" />
-              <h4 className="font-semibold text-blue-900 dark:text-blue-300 text-sm">Autonomous Multi-Agent Cascade in Progress</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mt-1">
+            <div className="flex-1 min-h-[460px] flex flex-col items-center justify-center p-12 text-center rounded-2xl border bg-slate-100/60 dark:bg-blue-950/10 border-slate-300 dark:border-blue-900/40">
+              <Loader2 className="w-10 h-10 text-slate-800 dark:text-blue-500 animate-spin mb-3" />
+              <h4 className="font-semibold text-slate-900 dark:text-blue-300 text-sm">Autonomous Multi-Agent Cascade in Progress</h4>
+              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm mt-1">
                 Data Gatherer is querying Supabase, Risk Analyst is modeling cascading failure trees, and Command Dispatcher is drafting tactical orders.
               </p>
             </div>
@@ -779,7 +788,7 @@ export default function Dashboard() {
               {/* Executive Header Card */}
               <div className="p-5 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <span className="text-[10px] font-semibold tracking-wider uppercase text-blue-600 dark:text-blue-400">
+                  <span className="text-[10px] font-semibold tracking-wider uppercase text-slate-500 dark:text-blue-400">
                     Executive Action Plan Authorized
                   </span>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
@@ -787,10 +796,10 @@ export default function Dashboard() {
                   </h3>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
-                  agent3.threat_level === 'CRITICAL' ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border border-red-200 dark:border-red-800' :
-                  agent3.threat_level === 'HIGH' ? 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 border border-orange-200 dark:border-orange-800' :
-                  agent3.threat_level === 'MEDIUM' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800' :
-                  'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                  agent3.threat_level === 'CRITICAL' ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800' :
+                  agent3.threat_level === 'HIGH' ? 'bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800' :
+                  agent3.threat_level === 'MEDIUM' ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800' :
+                  'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
                 }`}>
                   Priority: {agent3.threat_level || 'ROUTINE'}
                 </span>
@@ -801,7 +810,7 @@ export default function Dashboard() {
                 {agent3.three_step_dispatch_plan?.map((stepItem, idx) => (
                   <div key={idx} className="p-4 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold text-xs flex items-center justify-center shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700">
                         {stepItem.step || idx + 1}
                       </div>
                       <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
@@ -809,15 +818,15 @@ export default function Dashboard() {
                       </h4>
                     </div>
 
-                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed pl-8.5">
+                    <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed pl-8.5">
                       {stepItem.action_orders}
                     </p>
 
                     {stepItem.units_dispatched?.length > 0 && (
                       <div className="pl-8.5 pt-1.5 flex flex-wrap items-center gap-1.5">
-                        <span className="text-[10px] font-medium text-slate-400">Deployed Units:</span>
+                        <span className="text-[10px] font-medium text-slate-500">Deployed Units:</span>
                         {stepItem.units_dispatched.map((u, uIdx) => (
-                          <span key={uIdx} className="text-[10px] font-medium px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                          <span key={uIdx} className="text-[10px] font-medium px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
                             {u}
                           </span>
                         ))}
@@ -855,7 +864,7 @@ export default function Dashboard() {
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">Cascading Infrastructure Vulnerability Tree</h3>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 block font-medium">Critical Threshold Window</span>
+                  <span className="text-[10px] text-slate-500 block font-medium">Critical Threshold Window</span>
                   <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">{agent2.time_to_critical_failure}</span>
                 </div>
               </div>
@@ -876,7 +885,7 @@ export default function Dashboard() {
                     <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                     <div>
                       <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{vuln.system}</span>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{vuln.risk}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{vuln.risk}</p>
                     </div>
                   </div>
                 ))}
@@ -889,20 +898,20 @@ export default function Dashboard() {
             <div className="space-y-4">
               <div className="p-5 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-semibold tracking-wider uppercase text-blue-600 dark:text-blue-400">
+                  <span className="text-[10px] font-semibold tracking-wider uppercase text-slate-500 dark:text-blue-400">
                     Agent 1 Ingestion Audit
                   </span>
-                  <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                  <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                     {agent1.incident_classification || 'EVALUATED'}
                   </span>
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">IoT Telemetry & Optical Fusion Dossier</h3>
-                <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">{agent1.data_synthesis}</p>
+                <p className="text-xs text-slate-700 dark:text-slate-300 mt-2 leading-relaxed">{agent1.data_synthesis}</p>
               </div>
 
               {agent1.visual_surveillance_analysis && (
-                <div className="p-4 rounded-2xl border bg-cyan-50/50 dark:bg-cyan-950/20 border-cyan-200 dark:border-cyan-800/60 text-xs">
-                  <div className="flex items-center gap-2 font-semibold text-cyan-700 dark:text-cyan-300 mb-1">
+                <div className="p-4 rounded-2xl border bg-slate-50 dark:bg-cyan-950/20 border-slate-200 dark:border-cyan-800/60 text-xs">
+                  <div className="flex items-center gap-2 font-semibold text-slate-800 dark:text-cyan-300 mb-1">
                     <Eye className="w-4 h-4" /> Optical Corroboration Findings
                   </div>
                   <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
@@ -920,7 +929,7 @@ export default function Dashboard() {
                     <div key={sIdx} className="p-3.5 rounded-xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{sens.id}</span>
+                          <span className="font-mono text-xs font-bold text-slate-900 dark:text-blue-400">{sens.id}</span>
                           <span className="text-xs font-medium text-slate-800 dark:text-slate-200">{sens.name}</span>
                         </div>
                         <p className="text-[11px] text-slate-500 mt-0.5">{sens.telemetry_finding}</p>
@@ -934,7 +943,7 @@ export default function Dashboard() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-slate-500 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 italic">
+                  <p className="text-xs text-slate-500 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40 italic">
                     Baseline sensors within normal operational tolerances. No anomalous infrastructure correlation.
                   </p>
                 )}
