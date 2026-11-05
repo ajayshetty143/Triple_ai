@@ -8,7 +8,6 @@ function cleanAndParseJSON(rawText) {
   try {
     return JSON.parse(rawText);
   } catch (e1) {
-    // Strip ```json and ``` if present
     const cleaned = rawText
       .replace(/```json/gi, '')
       .replace(/```/g, '')
@@ -58,7 +57,7 @@ async function callLLM({ systemPrompt, userPrompt, jsonMode = true }) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(455).json({ error: 'Method Not Allowed. Use POST.' });
+    return res.status(405).json({ error: 'Method Not Allowed. Use POST.' });
   }
 
   const startTime = Date.now();
@@ -88,26 +87,31 @@ export default async function handler(req, res) {
     // STEP 1: AGENT 1 - Data Gatherer & Telemetry Specialist
     // ==========================================
     const agent1SystemPrompt = `You are Agent 1 (Data Gatherer & Urban Sensor Specialist) in an autonomous city emergency command system.
-Your job is to cross-reference the reported citizen incident with the live sensor telemetry from our database AND any visual evidence from CCTV/Live Camera feeds.
-Analyze which sensors indicate anomalies, identify optical or visual corroborations from cameras, determine the primary affected zone, and summarize the ground truth.
+Your job is to cross-reference the reported citizen incident with live sensor telemetry from our database AND any visual camera evidence.
+
+CRUCIAL RULE OF RELEVANCE:
+- Evaluate whether the reported incident is an isolated, minor, or routine event (e.g. a bike skid, slip and fall, minor traffic bump) OR a major infrastructure disaster (e.g. gas explosion, flood, structural failure).
+- Do NOT associate unrelated sensors! If someone fell off a bicycle and there is no mention or physical evidence of a gas rupture or flood, state clearly that the gas and flood sensors are UNRELATED baseline readings.
+- Calibrate the incident severity objectively.
 
 Strict Rule: Output valid JSON ONLY matching this structure:
 {
-  "incident_summary": "Short 1-2 sentence summary of report",
-  "affected_sector": "e.g. Sector 4",
+  "incident_summary": "Accurate 1-2 sentence summary of what actually happened",
+  "affected_sector": "Specific sector (e.g. Sector 4, Sector 2, or Local Street)",
+  "incident_classification": "ROUTINE_LOCAL" | "MODERATE" | "SEVERE" | "CATASTROPHIC",
   "critical_sensors": [
-    { "id": "SENSOR_ID", "name": "SENSOR_NAME", "status": "STATUS", "telemetry_finding": "brief finding" }
+    { "id": "SENSOR_ID", "name": "SENSOR_NAME", "status": "STATUS", "telemetry_finding": "brief finding only if relevant" }
   ],
-  "visual_surveillance_analysis": "Optical findings from camera feed/uploaded visual evidence (e.g. visible water depth, smoke plumes, trapped vehicles)",
-  "environmental_factors": "e.g. Weather, congestion, or water levels",
-  "data_synthesis": "Crisp paragraph summarizing what both the sensor data and visual surveillance objectively reveal."
+  "visual_surveillance_analysis": "Optical findings from camera feed or visual evidence",
+  "environmental_factors": "Weather, surface condition, or road congestion",
+  "data_synthesis": "Crisp paragraph objectively summarizing the situation without exaggerating."
 }`;
 
     const visualContext = mediaEvidence 
       ? `VISUAL EVIDENCE / SURVEILLANCE FEED:
 Source: ${cameraSource || 'Live Stream / Citizen Upload'}
-Visual Analysis Payload: Visual evidence provided and active in command center.`
-      : `VISUAL EVIDENCE: No live optical feed attached. Relying purely on IoT telemetry.`;
+Visual Analysis Payload: Visual evidence attached and active.`
+      : `VISUAL EVIDENCE: No live optical feed attached. Relying on reported telemetry.`;
 
     const agent1UserPrompt = `CITIZEN INCIDENT REPORT:
 "${incident}"
@@ -130,24 +134,27 @@ Provide your structured JSON data summary now.`;
     // ==========================================
     const agent2SystemPrompt = `You are Agent 2 (Infrastructure Risk Analyst) in an autonomous city emergency command system.
 You receive the exact telemetry summary from Agent 1.
-Your job is to deduce cascading infrastructural vulnerabilities (e.g. what happens if gas lines ignite near power stations, road flooding cutting off trauma centers, grid failure).
+
+CRUCIAL PROPORTIONALITY RULE:
+- Assess cascading risks in proportion to the real event.
+- For minor or localized incidents (e.g. bike fall, medical slip), cascading risks are typically minimal (e.g. minor lane obstruction, ambulance arrival time, rubbernecking). Do NOT invent power outages or chemical explosions for minor events!
+- For major disasters (e.g. gas leak, major flood, substation fire), analyze full cascading infrastructure failures.
 
 Strict Rule: Output valid JSON ONLY matching this structure:
 {
-  "overall_threat_level": "CRITICAL" | "HIGH" | "MEDIUM",
-  "primary_hazards": ["List of 2-3 immediate physical threats"],
+  "overall_threat_level": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
+  "primary_hazards": ["List 1-3 immediate physical hazards"],
   "cascading_vulnerabilities": [
-    { "system": "e.g. Power Grid", "risk": "Description of cascading threat" },
-    { "system": "e.g. Medical Evacuation", "risk": "Description of access threat" }
+    { "system": "System name (e.g. Traffic Flow, Local Medical Access, Power Grid)", "risk": "Description of real risk" }
   ],
-  "time_to_critical_failure": "e.g. 20-30 minutes if uncontained",
-  "analyst_assessment": "Crisp strategic explanation of why this situation could escalate."
+  "time_to_critical_failure": "Estimated timeframe (e.g. N/A for minor, or '15-30 mins' for severe)",
+  "analyst_assessment": "Realistic strategic assessment of whether this situation could escalate."
 }`;
 
     const agent2UserPrompt = `AGENT 1 (DATA GATHERER) SITUATIONAL REPORT:
 ${JSON.stringify(agent1Output, null, 2)}
 
-Analyze the cascading infrastructure risks and produce your structured JSON risk assessment.`;
+Analyze the risks and produce your structured JSON risk assessment.`;
 
     const agent2Output = await callLLM({
       systemPrompt: agent2SystemPrompt,
@@ -160,34 +167,42 @@ Analyze the cascading infrastructure risks and produce your structured JSON risk
     // ==========================================
     const agent3SystemPrompt = `You are Agent 3 (City Commander) in the Municipal Emergency Command Center.
 You receive the exact cascading risk analysis from Agent 2 and telemetry from Agent 1.
-Your mission is to authorize a decisive, numbered, 3-step Emergency Action & Dispatch Plan.
-Each step must dispatch specific municipal units (Hazmat, EMS, Police, Power Utility, Transit).
+Your mission is to authorize a proportionate 3-step Emergency Action & Dispatch Plan.
+
+CRUCIAL DISPATCH PROPORTIONALITY RULE:
+- If threat_level is LOW or ROUTINE (e.g. bike skid, fallen pedestrian):
+  • Step 1: Dispatch local EMS ambulance/paramedic to treat the injured person.
+  • Step 2: Dispatch local traffic officer to clear the blocked lane.
+  • Step 3: Monitor route clearance and patient transport.
+  • Do NOT dispatch Hazmat, do NOT shut down the power grid, and do NOT order citywide evacuations!
+- If threat_level is HIGH or CRITICAL (e.g. gas fire, flood, grid failure):
+  • Dispatch specialized Hazmat, heavy fire suppression, power isolation, and order evacuations.
 
 Strict Rule: Output valid JSON ONLY matching this structure:
 {
-  "directive_title": "e.g. OPERATION SHIELD: CODE RED CONTAINMENT DIRECTIVE",
-  "threat_level": "CRITICAL" | "HIGH",
+  "directive_title": "Appropriate directive title (e.g. 'LOCAL INCIDENT: MEDICAL & TRAFFIC RESPONSE' for minor, or 'OPERATION SHIELD: CODE RED DIRECTIVE' for disaster)",
+  "threat_level": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
   "three_step_dispatch_plan": [
     {
       "step": 1,
-      "title": "Phase 1: Immediate Hazard Isolation & Evacuation",
+      "title": "Phase 1: Initial Response & Safety",
       "units_dispatched": ["Unit Name 1", "Unit Name 2"],
       "action_orders": "Precise tactical command."
     },
     {
       "step": 2,
-      "title": "Phase 2: Critical Infrastructure Safeguarding",
-      "units_dispatched": ["Unit Name 1", "Unit Name 2"],
+      "title": "Phase 2: Scene Management & Protection",
+      "units_dispatched": ["Unit Name 1"],
       "action_orders": "Precise tactical command."
     },
     {
       "step": 3,
-      "title": "Phase 3: Route Clearance & Public Protection",
-      "units_dispatched": ["Unit Name 1", "Unit Name 2"],
+      "title": "Phase 3: Route Clearance & Resolution",
+      "units_dispatched": ["Unit Name 1"],
       "action_orders": "Precise tactical command."
     }
   ],
-  "public_broadcast_alert": "Urgent SMS/Radio message for civilians in the affected area.",
+  "public_broadcast_alert": "Appropriate civilian advisory (or 'No civilian evacuation required. Minor traffic slowdown expected' for minor events)",
   "status": "DISPATCH_AUTHORIZED"
 }`;
 
@@ -197,7 +212,7 @@ ${JSON.stringify(agent2Output, null, 2)}
 AGENT 1 (TELEMETRY SUMMARY):
 ${JSON.stringify(agent1Output, null, 2)}
 
-Issue the authoritative 3-Step Emergency Action Plan in JSON.`;
+Issue the proportionate 3-Step Emergency Action Plan in JSON.`;
 
     const agent3Output = await callLLM({
       systemPrompt: agent3SystemPrompt,
@@ -207,7 +222,6 @@ Issue the authoritative 3-Step Emergency Action Plan in JSON.`;
 
     const executionDurationMs = Date.now() - startTime;
 
-    // Return the entire transparent pipeline result to the frontend
     return res.status(200).json({
       success: true,
       meta: {
@@ -230,4 +244,3 @@ Issue the authoritative 3-Step Emergency Action Plan in JSON.`;
     });
   }
 }
-
