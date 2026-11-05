@@ -191,11 +191,17 @@ export default function Dashboard() {
         body: JSON.stringify({ imagePayload: dataUrl, fileName: label })
       });
       const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Vision analysis failed');
+      }
       if (data.success && data.analysis) {
         const ana = data.analysis;
         setVisionAnalysis(ana);
-        if (ana.harm_detected) {
-          if (ana.severity === 'CRITICAL') {
+        const hasHarm = ana.harm_detected === true || 
+          ['ROUTINE_LOCAL', 'CRITICAL', 'LOW', 'MEDIUM', 'HIGH', 'SEVERE'].includes(ana.severity?.toUpperCase());
+        
+        if (hasHarm) {
+          if (['CRITICAL', 'HIGH', 'SEVERE'].includes(ana.severity?.toUpperCase())) {
             setOpticalScenario('critical');
           } else {
             setOpticalScenario('minor');
@@ -203,15 +209,17 @@ export default function Dashboard() {
         } else {
           setOpticalScenario('safe');
         }
+
         if (ana.suggested_incident_text || ana.scene_description) {
           const synthesizedText = ana.suggested_incident_text || `Field visual evidence (${label}): ${ana.scene_description}`;
           setIncidentText(synthesizedText);
           setActiveDossier(synthesizedText);
+          setChatInput(synthesizedText);
           setChatMessages(prev => [
             ...prev,
             {
               role: 'assistant',
-              content: `Optical evidence analyzed (${label}): ${ana.scene_description}. Action plan formulated below.`,
+              content: `Optical evidence analyzed (${label}): ${ana.scene_description}. ${hasHarm ? 'Incident detected: action plan formulated below.' : 'Scene verified safe baseline.'}`,
               dossier: synthesizedText
             }
           ]);
@@ -219,6 +227,7 @@ export default function Dashboard() {
       }
     } catch (err) {
       console.warn("Vision analysis error:", err);
+      setError(`AI Optical Vision Notice: ${err.message}. Please retry or select scenario manually.`);
     } finally {
       setIsAnalyzingVision(false);
     }
@@ -231,7 +240,7 @@ export default function Dashboard() {
     canvas.height = videoRef.current.videoHeight || 480;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg');
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
     setActiveMedia(dataUrl);
     setIsVideoMedia(false);
     stopWebcam();
@@ -264,11 +273,49 @@ export default function Dashboard() {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const dataUrl = event.target.result;
-      setActiveMedia(dataUrl);
-      if (!isVideo) {
-        runVisionAnalysis(dataUrl, file.name);
+      const rawDataUrl = event.target.result;
+      if (isVideo) {
+        setActiveMedia(rawDataUrl);
+        return;
       }
+
+      // Universal Browser Canvas Normalization:
+      // Converts ANY format (.avif, .webp, .png, .jpg, .bmp, etc.) to standard image/jpeg
+      // and constrains max dimension to 1280px for optimal speed and Groq compatibility
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.naturalWidth || img.width || 800;
+          let height = img.naturalHeight || img.height || 600;
+          const maxDim = 1280;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const normalizedJpeg = canvas.toDataURL('image/jpeg', 0.88);
+          setActiveMedia(normalizedJpeg);
+          runVisionAnalysis(normalizedJpeg, file.name);
+        } catch (canvasErr) {
+          console.warn("Canvas conversion fallback:", canvasErr);
+          setActiveMedia(rawDataUrl);
+          runVisionAnalysis(rawDataUrl, file.name);
+        }
+      };
+      img.onerror = () => {
+        setActiveMedia(rawDataUrl);
+        runVisionAnalysis(rawDataUrl, file.name);
+      };
+      img.src = rawDataUrl;
     };
     reader.readAsDataURL(file);
   };
