@@ -50,21 +50,20 @@
     --bg-surface-border: rgba(245, 158, 11, 0.25);
 }
 
-/* Reset & Basics */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-html, body {
+/* Scoped Login Page Root */
+.login-page-root {
     width: 100%;
-    min-height: 100%;
+    min-height: 100vh;
     background-color: var(--bg-dark);
     font-family: var(--font-body);
     color: var(--text-primary);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
+    position: relative;
+}
+
+.login-page-root * {
+    box-sizing: border-box;
 }
 
 /* ==========================================================================

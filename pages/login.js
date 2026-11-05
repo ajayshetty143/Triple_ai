@@ -113,9 +113,9 @@ export default function LoginPage() {
   const [theme, setTheme] = useState('cyan');
   const [authView, setAuthView] = useState('login'); // 'login' | 'signup'
   
-  // Login Form
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
+  // Login Form (with standard demo credentials pre-filled for immediate testing)
+  const [loginEmail, setLoginEmail] = useState('operator@metropolis.gov');
+  const [loginPassword, setLoginPassword] = useState('metropolis2026');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -138,18 +138,13 @@ export default function LoginPage() {
     const sfx = new SoundFX();
     setSoundFX(sfx);
 
-    // Initial Registration Check
+    // Initial Registration Check (Always default to Operator Login for immediate entry)
     try {
-      const isRegistered = localStorage.getItem('smartcity_registered');
       const savedEmail = localStorage.getItem('smartcity_user_email');
       if (savedEmail) {
         setLoginEmail(savedEmail);
       }
-      if (!isRegistered) {
-        setAuthView('signup');
-      } else {
-        setAuthView('login');
-      }
+      setAuthView('login');
     } catch (e) {}
 
     // Set initial theme
@@ -186,13 +181,24 @@ export default function LoginPage() {
     setPasswordScore(score);
   };
 
+  const handleQuickDemoLogin = () => {
+    if (soundFX) soundFX.playSuccess();
+    showToast('⚡ 1-Click Demo Access Authorized! Initializing Central Command...', 'success');
+    try {
+      localStorage.setItem('smartcity_registered', 'true');
+      localStorage.setItem('smartcity_user_email', 'operator@metropolis.gov');
+      localStorage.setItem('smartcity_operator_name', 'Alex Morgan (Commander)');
+      localStorage.setItem('smartcity_auth_token', 'TOKEN_DEMO_' + Date.now());
+    } catch (err) {}
+    setTimeout(() => {
+      router.push('/');
+    }, 600);
+  };
+
   const handleLoginSubmit = (e) => {
     e.preventDefault();
-    if (!loginEmail.trim() || !loginPassword.trim()) {
-      if (soundFX) soundFX.playError();
-      showToast('Please provide both Operator Identity and Security Cipher.', 'error');
-      return;
-    }
+    const effectiveEmail = loginEmail.trim() || 'operator@metropolis.gov';
+    const effectivePassword = loginPassword.trim() || 'metropolis2026';
 
     setLoginLoading(true);
     setTimeout(() => {
@@ -202,17 +208,16 @@ export default function LoginPage() {
       // Save user session
       try {
         localStorage.setItem('smartcity_registered', 'true');
-        if (rememberMe) {
-          localStorage.setItem('smartcity_user_email', loginEmail.trim());
-        }
+        localStorage.setItem('smartcity_user_email', effectiveEmail);
+        localStorage.setItem('smartcity_operator_name', effectiveEmail.split('@')[0]);
         localStorage.setItem('smartcity_auth_token', 'TOKEN_OPERATOR_' + Date.now());
       } catch (err) {}
 
-      showToast(`Welcome back, ${loginEmail.split('@')[0]}! Authorization granted.`, 'success');
+      showToast(`Welcome back, ${effectiveEmail.split('@')[0]}! Authorization granted.`, 'success');
       setTimeout(() => {
         router.push('/');
-      }, 900);
-    }, 1000);
+      }, 700);
+    }, 750);
   };
 
   const handleSignupSubmit = (e) => {
@@ -244,8 +249,8 @@ export default function LoginPage() {
 
       setTimeout(() => {
         router.push('/');
-      }, 1000);
-    }, 1100);
+      }, 800);
+    }, 850);
   };
 
   const handleGoogleSSO = () => {
@@ -260,12 +265,12 @@ export default function LoginPage() {
       } catch (err) {}
       if (soundFX) soundFX.playSuccess();
       showToast('Google SSO Verified. Access Granted.', 'success');
-      setTimeout(() => router.push('/'), 800);
-    }, 1200);
+      setTimeout(() => router.push('/'), 700);
+    }, 800);
   };
 
   return (
-    <>
+    <div className="login-page-root">
       <Head>
         <title>SmartCity OS // Metropolis Gateway Login</title>
         <meta name="description" content="Central Smart City Operator Authentication & Gateway" />
@@ -366,6 +371,48 @@ export default function LoginPage() {
           <div className="card-container">
             <div className="normal-card">
 
+              {/* View Switcher Tabs */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', background: 'rgba(6,10,22,0.7)', padding: '6px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <button
+                  type="button"
+                  onClick={() => { setAuthView('login'); if (soundFX) soundFX.playClick(); }}
+                  style={{
+                    flex: 1,
+                    padding: '9px 14px',
+                    fontSize: '0.85rem',
+                    fontWeight: '700',
+                    borderRadius: '10px',
+                    border: authView === 'login' ? '1px solid var(--primary)' : '1px solid transparent',
+                    background: authView === 'login' ? 'rgba(var(--primary-rgb), 0.18)' : 'transparent',
+                    color: authView === 'login' ? 'var(--primary)' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    letterSpacing: '0.04em'
+                  }}
+                >
+                  🔑 Operator Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAuthView('signup'); if (soundFX) soundFX.playClick(); }}
+                  style={{
+                    flex: 1,
+                    padding: '9px 14px',
+                    fontSize: '0.85rem',
+                    fontWeight: '700',
+                    borderRadius: '10px',
+                    border: authView === 'signup' ? '1px solid var(--primary)' : '1px solid transparent',
+                    background: authView === 'signup' ? 'rgba(var(--primary-rgb), 0.18)' : 'transparent',
+                    color: authView === 'signup' ? 'var(--primary)' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    letterSpacing: '0.04em'
+                  }}
+                >
+                  📝 Register Identity
+                </button>
+              </div>
+
               {/* ================= SIGN IN VIEW ================= */}
               {authView === 'login' && (
                 <div id="login-view" className="auth-view active">
@@ -373,6 +420,35 @@ export default function LoginPage() {
                     <h1 className="card-title">Operator Login</h1>
                     <p className="card-subtitle">Connect to the central metropolis smart grid</p>
                   </div>
+
+                  {/* 1-Click Quick Demo Login Button */}
+                  <button
+                    type="button"
+                    onClick={handleQuickDemoLogin}
+                    style={{
+                      width: '100%',
+                      padding: '0.8rem 1rem',
+                      marginBottom: '1.25rem',
+                      borderRadius: '12px',
+                      border: '1px solid var(--primary)',
+                      background: 'rgba(var(--primary-rgb), 0.12)',
+                      color: 'var(--primary)',
+                      fontFamily: 'var(--font-heading)',
+                      fontSize: '0.95rem',
+                      fontWeight: '700',
+                      letterSpacing: '0.06em',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.6rem',
+                      boxShadow: '0 0 15px rgba(var(--primary-rgb), 0.15)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <span>⚡</span>
+                    <span>1-CLICK DEMO ACCESS (INITIALIZE COMMAND)</span>
+                  </button>
 
                   <form onSubmit={handleLoginSubmit} className="auth-form" noValidate>
                     {/* Username / Email */}
@@ -742,7 +818,7 @@ export default function LoginPage() {
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }
 

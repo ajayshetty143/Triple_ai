@@ -98,25 +98,35 @@ export default function Dashboard() {
   const router = useRouter();
   const [isDark, setIsDark] = useState(true);
   const [operatorSession, setOperatorSession] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     try {
+      const token = localStorage.getItem('smartcity_auth_token');
       const email = localStorage.getItem('smartcity_user_email');
       const name = localStorage.getItem('smartcity_operator_name');
-      if (email || name) {
-        setOperatorSession(name || email.split('@')[0]);
+
+      if (!token && !email) {
+        router.replace('/login');
+        return;
       }
-    } catch (e) {}
-  }, []);
+      setOperatorSession(name || (email ? email.split('@')[0] : 'Commander'));
+      setAuthChecked(true);
+    } catch (e) {
+      router.replace('/login');
+    }
+  }, [router]);
 
   const handleSignOut = () => {
     try {
       localStorage.removeItem('smartcity_auth_token');
       localStorage.removeItem('smartcity_user_email');
       localStorage.removeItem('smartcity_operator_name');
+      localStorage.removeItem('smartcity_registered');
     } catch (e) {}
     setOperatorSession(null);
-    router.push('/login');
+    setAuthChecked(false);
+    router.replace('/login');
   };
 
   useEffect(() => {
@@ -447,6 +457,26 @@ export default function Dashboard() {
   const agent1 = result?.pipeline?.agent1_data_gatherer;
   const agent2 = result?.pipeline?.agent2_risk_analyst;
   const agent3 = result?.pipeline?.agent3_city_commander;
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-[#070a14] flex flex-col items-center justify-center text-white font-sans p-4">
+        <Head>
+          <title>Metropolis OS // Verifying Gateway Access</title>
+        </Head>
+        <div className="relative flex items-center justify-center mb-6">
+          <div className="w-16 h-16 rounded-full border-2 border-cyan-500/30 border-t-cyan-400 animate-spin" />
+          <div className="absolute w-8 h-8 rounded-full bg-cyan-500/20 animate-ping" />
+        </div>
+        <div className="text-sm font-mono tracking-widest text-cyan-400 uppercase text-center">
+          METROPOLIS SECURITY GATEWAY // VERIFYING OPERATOR AUTHORIZATION
+        </div>
+        <div className="text-xs text-slate-500 mt-2 text-center">
+          Connecting to central smart city neural core...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen transition-colors duration-200 font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
