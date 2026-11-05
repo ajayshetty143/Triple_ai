@@ -51,6 +51,7 @@ async function callLLM({ systemPrompt, userPrompt, jsonMode = true, imageUrl = n
         },
         body: JSON.stringify({
           model: currentModel,
+          max_tokens: 450,
           temperature: 0.1,
           response_format: jsonMode ? { type: 'json_object' } : undefined,
           messages: [
@@ -76,6 +77,7 @@ async function callLLM({ systemPrompt, userPrompt, jsonMode = true, imageUrl = n
             },
             body: JSON.stringify({
               model: 'qwen/qwen3.8-27b',
+              max_tokens: 450,
               temperature: 0.1,
               response_format: jsonMode ? { type: 'json_object' } : undefined,
               messages: [

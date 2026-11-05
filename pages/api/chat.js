@@ -63,6 +63,7 @@ YOUR OBJECTIVES:
           },
           body: JSON.stringify({
             model: currentModel,
+            max_tokens: 300,
             temperature: 0.4,
             messages: formattedMessages,
           }),

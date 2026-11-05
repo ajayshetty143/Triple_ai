@@ -50,6 +50,7 @@ Strict Rule: Output valid JSON ONLY matching this structure:
       },
       body: JSON.stringify({
         model: 'qwen/qwen3.8-27b',
+        max_tokens: 350,
         temperature: 0.1,
         response_format: { type: 'json_object' },
         messages: [
