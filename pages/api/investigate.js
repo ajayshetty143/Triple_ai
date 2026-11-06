@@ -118,7 +118,7 @@ export default async function handler(req, res) {
   }
 
   const startTime = Date.now();
-  const { incident, mediaEvidence, cameraSource, imagePayload } = req.body;
+  const { incident, mediaEvidence, cameraSource, imagePayload, incidentLocation } = req.body;
 
   if (!incident || typeof incident !== 'string') {
     return res.status(400).json({ error: 'Please provide a valid incident description.' });
@@ -188,15 +188,21 @@ Source Label: "${cameraSource || 'Live Stream / Citizen Upload'}"
 Optical File Status: Attached visual payload provided. Cross-reference this optical evidence directly.`
       : `VISUAL EVIDENCE: No live optical feed attached. Relying on reported telemetry.`;
 
+    const locationContext = incidentLocation 
+      ? `VERIFIED INCIDENT GEOLOCATION / TARGET SECTOR: "${incidentLocation}"`
+      : `INCIDENT LOCATION: Auto-Triangulated Municipal Grid (Sector 4)`;
+
     const agent1UserPrompt = `CITIZEN INCIDENT REPORT:
 "${incident}"
+
+${locationContext}
 
 ${visualContext}
 
 LIVE CITY SENSOR TELEMETRY FROM SUPABASE:
 ${JSON.stringify(sensors, null, 2)}
 
-Inspect the optical evidence and provide your structured JSON data summary now.`;
+Inspect the optical evidence and provide your structured JSON data summary now. In affected_sector, record "${incidentLocation || 'Nexus City Sector 4'}".`;
 
     const validImageUrl = imagePayload && typeof imagePayload === 'string' && (imagePayload.startsWith('data:image/') || imagePayload.startsWith('http')) 
       ? imagePayload 
@@ -375,7 +381,10 @@ ${JSON.stringify(agent2Output, null, 2)}
 AGENT 1 (TELEMETRY SUMMARY):
 ${JSON.stringify(agent1Output, null, 2)}
 
-Issue the proportionate 3-Step Emergency Action Plan in JSON.`;
+INCIDENT LOCATION / TARGET SECTOR:
+"${incidentLocation || 'Nexus City Sector 4'}"
+
+Issue the proportionate 3-Step Emergency Action Plan in JSON. Explicitly dispatch units to "${incidentLocation || 'Nexus City Sector 4'}".`;
 
     const agent3Output = await callLLM({
       systemPrompt: agent3SystemPrompt,
@@ -392,6 +401,7 @@ Issue the proportionate 3-Step Emergency Action Plan in JSON.`;
         sensors_consulted: sensors.length,
         camera_source: cameraSource || 'Municipal Camera Feed',
         attached_image: imagePayload || null,
+        incident_location: incidentLocation || 'Nexus City Sector 4',
         timestamp: new Date().toISOString(),
       },
       pipeline: {

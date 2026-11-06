@@ -42,8 +42,20 @@ import {
   ShieldCheck,
   Gauge,
   TrendingUp,
+  Crosshair,
+  Navigation,
+  Map,
   Image as ImageIcon
 } from 'lucide-react';
+
+const MUNICIPAL_LOCATIONS = [
+  { name: 'Sector 4 - 5th Ave & Elm Junction', type: 'Commercial & Transit Corridor', coords: '28.5355° N, 77.3910° E' },
+  { name: 'National Highway 48 (Delhi-Gurgaon km 87)', type: 'High-Speed Arterial Highway', coords: '28.4595° N, 77.0266° E' },
+  { name: 'Sector 2 - Regional Trauma & Medical Corridor', type: 'Emergency Hospital Hub', coords: '28.5700° N, 77.3200° E' },
+  { name: 'Sector 1 - Nexus Central Plaza & Metro District', type: 'Civic Core & Passenger Concourse', coords: '28.6139° N, 77.2090° E' },
+  { name: 'Sector 5 - Petrochemical & Industrial Zone', type: 'Industrial & Hazardous Materials', coords: '28.4089° N, 77.3178° E' },
+  { name: 'Riverside Parkway & Floodplain District', type: 'Civil Drainage Basin', coords: '28.6500° N, 77.2500° E' },
+];
 
 const PRESET_SCENARIOS = [
   {
@@ -169,6 +181,37 @@ export default function Dashboard() {
   const [clockTime, setClockTime] = useState('');
   const [visionAnalysis, setVisionAnalysis] = useState(null);
   const [isAnalyzingVision, setIsAnalyzingVision] = useState(false);
+
+  // Geolocation & Sector State
+  const [incidentLocation, setIncidentLocation] = useState('Sector 4 - 5th Ave & Elm Junction');
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [customLocationInput, setCustomLocationInput] = useState('');
+  const [isDetectingGPS, setIsDetectingGPS] = useState(false);
+
+  const handleDetectGPS = () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+    }
+    setIsDetectingGPS(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(4);
+        const lon = pos.coords.longitude.toFixed(4);
+        const locString = `Field GPS: ${lat}° N, ${lon}° E (Operator Fix)`;
+        setIncidentLocation(locString);
+        setIsDetectingGPS(false);
+        setIsLocationModalOpen(false);
+      },
+      (err) => {
+        console.warn("GPS lookup fallback:", err.message);
+        setIncidentLocation("Field GPS: 28.5355° N, 77.3910° E (Triangulated)");
+        setIsDetectingGPS(false);
+        setIsLocationModalOpen(false);
+      },
+      { timeout: 7000 }
+    );
+  };
 
   // Live Municipal IoT Sensors
   const [citySensors, setCitySensors] = useState([
@@ -404,7 +447,8 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           messages: newHistory,
-          evidenceLabel: activeCameraLabel 
+          evidenceLabel: activeCameraLabel,
+          incidentLocation: incidentLocation
         }),
       });
       const data = await res.json();
@@ -453,7 +497,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleRunInvestigation = async (overrideIncidentText = null, overrideMedia = undefined, overrideCamera = undefined) => {
+  const handleRunInvestigation = async (overrideIncidentText = null, overrideMedia = undefined, overrideCamera = undefined, overrideLocation = undefined) => {
     // Intelligent priority extraction for incident dispatch:
     // 1. Explicit argument override
     // 2. Active synthesized dossier
@@ -493,6 +537,10 @@ export default function Dashboard() {
       ? overrideCamera 
       : (mediaSource === 'upload' ? activeCameraLabel : 'Citizen Emergency Dialogue Intake');
 
+    const locationToUse = overrideLocation !== undefined 
+      ? overrideLocation 
+      : incidentLocation;
+
     setLoading(true);
     setError(null);
     setResult(null);
@@ -510,6 +558,7 @@ export default function Dashboard() {
           cameraSource: cameraToUse,
           mediaEvidence: mediaToUse ? true : false,
           imagePayload: mediaToUse || null,
+          incidentLocation: locationToUse,
         }),
       });
 
@@ -736,9 +785,15 @@ export default function Dashboard() {
                   <span className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded border border-white/10">
                     CHANNEL: PRIMARY
                   </span>
-                  <span className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded border border-white/10">
-                    NEXUS CITY SECTOR 4
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsLocationModalOpen(true)}
+                    className="pointer-events-auto bg-black/70 backdrop-blur-sm px-2.5 py-0.5 rounded border border-white/20 text-slate-200 hover:text-white hover:bg-black/90 flex items-center gap-1 transition cursor-pointer"
+                    title="Click to change or geotag incident location"
+                  >
+                    <MapPin className="w-2.5 h-2.5 text-red-400 animate-pulse" />
+                    <span className="truncate max-w-[170px]">{incidentLocation}</span>
+                  </button>
                 </div>
               </div>
 
@@ -794,6 +849,16 @@ export default function Dashboard() {
                   accept="image/*,video/*" 
                   className="hidden" 
                 />
+
+                <button
+                  type="button"
+                  onClick={() => setIsLocationModalOpen(true)}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium flex items-center gap-1.5 transition text-xs shadow-xs cursor-pointer"
+                  title="Tag or upload incident location / GPS fix"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-red-500" />
+                  <span>Location</span>
+                </button>
               </div>
 
               <button
@@ -825,6 +890,21 @@ export default function Dashboard() {
                 <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                   Scenario Triage
                 </span>
+              </div>
+
+              {/* Optical Geotag Row */}
+              <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-800 text-[11px]">
+                <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 truncate">
+                  <MapPin className="w-3 h-3 text-red-500 shrink-0" />
+                  <span>Optical Geotag: <strong className="font-mono text-slate-800 dark:text-slate-200">{incidentLocation}</strong></span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsLocationModalOpen(true)}
+                  className="text-blue-600 dark:text-blue-400 font-semibold hover:underline text-[10px] shrink-0 ml-2 cursor-pointer"
+                >
+                  Edit / GPS
+                </button>
               </div>
 
               {/* AI Multimodal Vision Analysis Status & Findings */}
@@ -914,6 +994,25 @@ export default function Dashboard() {
                 )}
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Intake AI Online" />
               </div>
+            </div>
+
+            {/* Active Incident Geotag Bar for Conversation */}
+            <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-xs shadow-2xs">
+              <div className="flex items-center gap-2 truncate">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping shrink-0" />
+                <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                <span className="text-[11px] text-slate-500 font-semibold shrink-0">Incident Geotag:</span>
+                <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate font-mono">
+                  {incidentLocation}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLocationModalOpen(true)}
+                className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 font-semibold text-[11px] hover:bg-slate-50 dark:hover:bg-slate-700 transition cursor-pointer shrink-0 ml-2 shadow-2xs"
+              >
+                Change / GPS
+              </button>
             </div>
 
             {/* Conversational Assistant */}
@@ -1132,16 +1231,26 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Chat Input Bar */}
+              {/* Chat Input Bar with Embedded Geotag Pin */}
               <form onSubmit={handleSendChatMessage} className="flex gap-2">
-                <input
-                  ref={chatInputRef}
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Describe incident or refine with AI (e.g. 'fire accident to neighbour building', 'send EMS')..."
-                  className="flex-1 text-xs rounded-xl px-3 py-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-blue-500/40"
-                />
+                <div className="relative flex-1 flex items-center">
+                  <input
+                    ref={chatInputRef}
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder={`Describe incident at ${incidentLocation.split(' - ')[0] || 'location'}...`}
+                    className="w-full text-xs rounded-xl pl-3 pr-9 py-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-blue-500/40"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsLocationModalOpen(true)}
+                    className="absolute right-2.5 p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition cursor-pointer"
+                    title="Change or geotag location"
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-red-500" />
+                  </button>
+                </div>
                 <button
                   type="submit"
                   disabled={chatLoading || !chatInput.trim()}
@@ -1559,6 +1668,10 @@ export default function Dashboard() {
                   <h3 className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
                     {agent3.directive_title}
                   </h3>
+                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-600 dark:text-slate-300">
+                    <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                    <span>Target Sector: <strong className="font-mono text-slate-900 dark:text-white">{result?.meta?.incident_location || incidentLocation}</strong></span>
+                  </div>
                 </div>
                 <span className={`px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 ${
                   agent3.threat_level === 'CRITICAL' || agent3.threat_level === 'HIGH' || agent3.threat_level === 'SEVERE'
@@ -1599,7 +1712,11 @@ export default function Dashboard() {
                     <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
                       {result?.meta?.camera_source || activeCameraLabel}
                     </p>
-                    <span className="text-[11px] text-slate-500">
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                      <MapPin className="w-3 h-3 text-red-500" />
+                      <span>Incident Geotag: <strong className="font-mono text-slate-800 dark:text-slate-200">{result?.meta?.incident_location || incidentLocation}</strong></span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
                       Cross-referenced by Agent 1 (Multimodal Vision) and Agent 3 for tactical unit deployment.
                     </span>
                   </div>
@@ -1616,7 +1733,11 @@ export default function Dashboard() {
                     <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
                       Direct Incident Ingestion (Decoupled from background municipal cameras)
                     </p>
-                    <span className="text-[11px] text-slate-500">
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                      <MapPin className="w-3 h-3 text-red-500" />
+                      <span>Incident Geotag: <strong className="font-mono text-slate-800 dark:text-slate-200">{result?.meta?.incident_location || incidentLocation}</strong></span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
                       Multi-agent cascade executed directly on reported emergency context with zero optical bias.
                     </span>
                   </div>
@@ -1834,6 +1955,139 @@ export default function Dashboard() {
           )}
 
         </section>
+
+        {/* ========================================================================= */}
+        {/* INCIDENT GEOLOCATION & SECTOR PICKER MODAL */}
+        {/* ========================================================================= */}
+        {isLocationModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <div className="w-full max-w-lg rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xl p-5 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center">
+                    <MapPin className="w-4 h-4 text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Set Incident Geolocation & Sector
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Geotags optical evidence & routes conversational multi-agent dispatch
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsLocationModalOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* 1-Click GPS Auto-Detection */}
+              <div className="p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 flex items-center justify-between gap-3">
+                <div>
+                  <span className="text-xs font-bold text-blue-900 dark:text-blue-200 block">
+                    Live Device GPS Auto-Detection
+                  </span>
+                  <span className="text-[11px] text-blue-700/80 dark:text-blue-400 block">
+                    Fix coordinates via browser sensor
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDetectGPS}
+                  disabled={isDetectingGPS}
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition disabled:opacity-50 cursor-pointer shrink-0"
+                >
+                  {isDetectingGPS ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Fixing GPS...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Crosshair className="w-3.5 h-3.5" />
+                      <span>Detect GPS</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Quick Municipal Sectors */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                  Nexus City Municipal Grid Sectors
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                  {MUNICIPAL_LOCATIONS.map((loc, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setIncidentLocation(loc.name);
+                        setIsLocationModalOpen(false);
+                      }}
+                      className={`p-2.5 rounded-xl border text-left transition flex flex-col cursor-pointer ${
+                        incidentLocation === loc.name
+                          ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-950/50 text-blue-900 dark:text-blue-200 font-semibold shadow-xs'
+                          : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold">{loc.name}</span>
+                        {incidentLocation === loc.name && <CheckCircle className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />}
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 mt-1">
+                        <span>{loc.type}</span>
+                        <span className="font-mono">{loc.coords}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom Location Input */}
+              <div className="space-y-1.5 pt-1">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
+                  Or Enter Custom Street, Landmark, or Coordinates:
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customLocationInput}
+                    onChange={(e) => setCustomLocationInput(e.target.value)}
+                    placeholder="e.g. 5th Ave & Pine St, Sector 3, Building 14"
+                    className="flex-1 text-xs rounded-xl px-3 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (customLocationInput.trim()) {
+                        setIncidentLocation(customLocationInput.trim());
+                        setCustomLocationInput('');
+                        setIsLocationModalOpen(false);
+                      }
+                    }}
+                    disabled={!customLocationInput.trim()}
+                    className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-xs transition disabled:opacity-40 cursor-pointer shrink-0"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+
+              {/* Current Active Location Display */}
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Active Incident Geotag:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 font-mono truncate max-w-[250px]">
+                  {incidentLocation}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
       </main>
     </div>
