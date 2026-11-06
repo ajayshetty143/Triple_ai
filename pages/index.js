@@ -57,6 +57,69 @@ const MUNICIPAL_LOCATIONS = [
   { name: 'Riverside Parkway & Floodplain District', type: 'Civil Drainage Basin', coords: '28.6500° N, 77.2500° E' },
 ];
 
+const MUNICIPAL_ROLES = {
+  commander: {
+    id: 'commander',
+    title: 'City Commander',
+    dept: 'Central Executive Command',
+    badge: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
+    icon: '⭐',
+    scope: 'All Sectors (Global Municipal Grid)',
+    wsChannel: 'channel("dept:all")',
+    focus: 'Cross-Agency Strategic Dispatch & Crisis Defense',
+    feedId: 'CCTV-09 (Nexus City Boulevard)',
+    defaultLocation: 'Sector 4 - 5th Ave & Elm Junction'
+  },
+  traffic: {
+    id: 'traffic',
+    title: 'Traffic & Highway Patrol',
+    dept: 'Highway & Roadway Authority',
+    badge: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    icon: '🚦',
+    scope: 'Sector 4, NH 48 Corridor & Arterials',
+    wsChannel: 'channel("dept:traffic")',
+    focus: 'Lane Diversions, Crash Clearances & Traffic Signals',
+    feedId: 'CCTV-05 (4th Ave Crossing)',
+    defaultLocation: 'National Highway 48 (Delhi-Gurgaon km 87)'
+  },
+  fire: {
+    id: 'fire',
+    title: 'Fire & Hazmat Marshal',
+    dept: 'Bureau of Fire Suppression & Chemical Safety',
+    badge: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30',
+    icon: '🔥',
+    scope: 'Sector 5 Petrochemical & Sector 4 Gas Lines',
+    wsChannel: 'channel("dept:fire")',
+    focus: 'Flashover Suppression, Gas Isolation & Water Pressure',
+    feedId: 'CCTV-07 (5th Ave Junction)',
+    defaultLocation: 'Sector 4 - 5th Ave & Elm Junction'
+  },
+  security: {
+    id: 'security',
+    title: 'Apartment & Facility Security',
+    dept: 'Residential & Commercial Wardens',
+    badge: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+    icon: '🏢',
+    scope: 'Residential Complexes, Lobbies & Perimeter CCTV',
+    wsChannel: 'channel("dept:security")',
+    focus: 'Resident Check-in, False Alarm Verification & Exit Safety',
+    feedId: 'CCTV-09 (Nexus City Boulevard)',
+    defaultLocation: 'Sector 1 - Nexus Central Plaza & Metro District'
+  },
+  ems: {
+    id: 'ems',
+    title: 'Trauma EMS Paramedic',
+    dept: 'Emergency Medical & Hospital Triage',
+    badge: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/30',
+    icon: '🚑',
+    scope: 'Sector 2 Medical Corridor & Trauma Centers',
+    wsChannel: 'channel("dept:ems")',
+    focus: 'Advanced Life Support (ALS), ICU Bed Triage & Extraction',
+    feedId: 'CCTV-05 (4th Ave Crossing)',
+    defaultLocation: 'Sector 2 - Regional Trauma & Medical Corridor'
+  }
+};
+
 const PRESET_SCENARIOS = [
   {
     title: "Routine Surveillance & Safe Baseline",
@@ -114,6 +177,8 @@ export default function Dashboard() {
   const router = useRouter();
   const [isDark, setIsDark] = useState(true);
   const [operatorSession, setOperatorSession] = useState(null);
+  const [operatorRole, setOperatorRole] = useState('commander');
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
@@ -121,23 +186,37 @@ export default function Dashboard() {
       const token = localStorage.getItem('smartcity_auth_token');
       const email = localStorage.getItem('smartcity_user_email');
       const name = localStorage.getItem('smartcity_operator_name');
+      const role = localStorage.getItem('smartcity_operator_role');
 
       if (!token && !email) {
         router.replace('/login');
         return;
       }
       setOperatorSession(name || (email ? email.split('@')[0] : 'Commander'));
+      if (role && MUNICIPAL_ROLES[role]) {
+        setOperatorRole(role);
+      }
       setAuthChecked(true);
     } catch (e) {
       router.replace('/login');
     }
   }, [router]);
 
+  const handleSwitchRole = (roleKey) => {
+    if (!MUNICIPAL_ROLES[roleKey]) return;
+    setOperatorRole(roleKey);
+    localStorage.setItem('smartcity_operator_role', roleKey);
+    const roleCfg = MUNICIPAL_ROLES[roleKey];
+    setIncidentLocation(roleCfg.defaultLocation);
+    setIsRoleModalOpen(false);
+  };
+
   const handleSignOut = () => {
     try {
       localStorage.removeItem('smartcity_auth_token');
       localStorage.removeItem('smartcity_user_email');
       localStorage.removeItem('smartcity_operator_name');
+      localStorage.removeItem('smartcity_operator_role');
       localStorage.removeItem('smartcity_registered');
     } catch (e) {}
     setOperatorSession(null);
@@ -690,16 +769,18 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* Operational Metrics, Theme Toggle, Operator Profile */}
-          <div className="flex items-center gap-2.5 text-xs">
+          {/* Operational Metrics, Theme Toggle, Operator Profile & Stakeholder RBAC */}
+          <div className="flex items-center gap-2 text-xs">
             <div className="hidden xl:flex items-center gap-2 font-medium">
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-slate-50 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-[11px] font-mono">Supabase Online</span>
               </div>
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-slate-50 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                <Cpu className="w-3 h-3 text-cyan-400" />
-                <span className="text-[11px] font-mono">Groq LPU Active</span>
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                <span className="text-[10px] font-mono font-semibold text-cyan-600 dark:text-cyan-400">
+                  {MUNICIPAL_ROLES[operatorRole]?.wsChannel || 'channel("dept:all")'}
+                </span>
               </div>
               {result?.meta?.execution_time_ms && (
                 <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg border bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-mono text-[11px]">
@@ -708,6 +789,20 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+
+            {/* Stakeholder Persona / RBAC Switcher Pill */}
+            <button
+              type="button"
+              onClick={() => setIsRoleModalOpen(true)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition cursor-pointer shadow-2xs ${
+                MUNICIPAL_ROLES[operatorRole]?.badge || 'bg-blue-50 text-blue-700'
+              }`}
+              title="Click to switch municipal stakeholder console (RBAC)"
+            >
+              <span>{MUNICIPAL_ROLES[operatorRole]?.icon}</span>
+              <span className="font-bold text-[11px] max-w-[130px] truncate">{MUNICIPAL_ROLES[operatorRole]?.title}</span>
+              <span className="text-[10px] opacity-75">▼</span>
+            </button>
 
             <button
               type="button"
@@ -723,7 +818,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-800">
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-slate-100 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs">
                   <User className="w-3 h-3 text-cyan-400" />
-                  <span className="font-semibold max-w-[110px] truncate text-[11px]">{operatorSession}</span>
+                  <span className="font-semibold max-w-[90px] truncate text-[11px]">{operatorSession}</span>
                 </div>
                 <button
                   type="button"
@@ -1775,6 +1870,103 @@ export default function Dashboard() {
                 ))}
               </div>
 
+              {/* Segregated Departmental Routing Matrix (WebSockets) */}
+              <div className="p-4 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <Radio className="w-4 h-4 text-blue-500 animate-pulse" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      Multi-Stakeholder Segregated Dispatch Matrix (WebSocket Routing)
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold">
+                    RBAC Partitioned
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  {/* Fire Bureau */}
+                  <div className={`p-3 rounded-xl border text-xs transition ${
+                    operatorRole === 'fire' 
+                      ? 'border-red-500 bg-red-50/80 dark:bg-red-950/40 text-red-950 dark:text-red-200 ring-2 ring-red-500/30' 
+                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 text-slate-700 dark:text-slate-300'
+                  }`}>
+                    <div className="flex items-center justify-between font-bold mb-1">
+                      <span className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
+                        <span>🔥</span> Fire & Hazmat Bureau
+                      </span>
+                      {operatorRole === 'fire' && <span className="text-[9px] bg-red-600 text-white px-2 py-0.5 rounded font-mono font-bold">YOUR CONSOLE</span>}
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      {agent3.three_step_dispatch_plan?.[0]?.action_orders || 'Phase 1: Fire suppression, water pressure boost & gas line isolation.'}
+                    </p>
+                    <div className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-1">
+                      <span>Units:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{agent3.three_step_dispatch_plan?.[0]?.units_dispatched?.join(', ') || 'Engine Co 9, Ladder 3'}</span>
+                    </div>
+                  </div>
+
+                  {/* Traffic Command */}
+                  <div className={`p-3 rounded-xl border text-xs transition ${
+                    operatorRole === 'traffic' 
+                      ? 'border-amber-500 bg-amber-50/80 dark:bg-amber-950/40 text-amber-950 dark:text-amber-200 ring-2 ring-amber-500/30' 
+                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 text-slate-700 dark:text-slate-300'
+                  }`}>
+                    <div className="flex items-center justify-between font-bold mb-1">
+                      <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                        <span>🚦</span> Traffic & Roadway Command
+                      </span>
+                      {operatorRole === 'traffic' && <span className="text-[9px] bg-amber-600 text-white px-2 py-0.5 rounded font-mono font-bold">YOUR CONSOLE</span>}
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      {agent3.three_step_dispatch_plan?.[2]?.action_orders || agent3.three_step_dispatch_plan?.[1]?.action_orders || 'Phase 2: Enforce arterial lane lockdown; divert civilian traffic upstream.'}
+                    </p>
+                    <div className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-1">
+                      <span>Units:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{agent3.three_step_dispatch_plan?.[2]?.units_dispatched?.join(', ') || 'Nexus City Traffic Patrol'}</span>
+                    </div>
+                  </div>
+
+                  {/* Trauma EMS */}
+                  <div className={`p-3 rounded-xl border text-xs transition ${
+                    operatorRole === 'ems' 
+                      ? 'border-cyan-500 bg-cyan-50/80 dark:bg-cyan-950/40 text-cyan-950 dark:text-cyan-200 ring-2 ring-cyan-500/30' 
+                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 text-slate-700 dark:text-slate-300'
+                  }`}>
+                    <div className="flex items-center justify-between font-bold mb-1">
+                      <span className="flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400">
+                        <span>🚑</span> Regional Trauma EMS
+                      </span>
+                      {operatorRole === 'ems' && <span className="text-[9px] bg-cyan-600 text-white px-2 py-0.5 rounded font-mono font-bold">YOUR CONSOLE</span>}
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      {agent3.three_step_dispatch_plan?.[1]?.action_orders || 'Phase 2: Establish forward trauma triage point; prep emergency ICU transport.'}
+                    </p>
+                    <div className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-1">
+                      <span>Units:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{agent3.three_step_dispatch_plan?.[1]?.units_dispatched?.join(', ') || 'Nexus City Trauma EMS Squad'}</span>
+                    </div>
+                  </div>
+
+                  {/* Apartment Security */}
+                  <div className={`p-3 rounded-xl border text-xs transition ${
+                    operatorRole === 'security' 
+                      ? 'border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-200 ring-2 ring-emerald-500/30' 
+                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 text-slate-700 dark:text-slate-300'
+                  }`}>
+                    <div className="flex items-center justify-between font-bold mb-1">
+                      <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                        <span>🏢</span> Apartment & Facility Security
+                      </span>
+                      {operatorRole === 'security' && <span className="text-[9px] bg-emerald-600 text-white px-2 py-0.5 rounded font-mono font-bold">YOUR CONSOLE</span>}
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      Phase 3: Sound building alarms; secure perimeter exit corridors and verify false alarms or residential evacuations.
+                    </p>
+                    <div className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-1">
+                      <span>Units:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">Building Warden Unit & Civil Defense Squad</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Civilian Advisory Banner */}
               {agent3.public_broadcast_alert && (
                 <div className={`p-4 rounded-2xl border text-xs flex items-start gap-3 ${
@@ -2083,6 +2275,81 @@ export default function Dashboard() {
                 <span>Active Incident Geotag:</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200 font-mono truncate max-w-[250px]">
                   {incidentLocation}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* MUNICIPAL STAKEHOLDER PERSONA SWITCHER MODAL (RBAC) */}
+        {/* ========================================================================= */}
+        {isRoleModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <div className="w-full max-w-lg rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xl p-5 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-base">
+                    <span>👥</span>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Switch Stakeholder Persona (RBAC)
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Simulates role-based access control & segregated real-time WebSockets
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsRoleModalOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {Object.values(MUNICIPAL_ROLES).map((roleItem) => (
+                  <button
+                    key={roleItem.id}
+                    type="button"
+                    onClick={() => handleSwitchRole(roleItem.id)}
+                    className={`w-full p-3 rounded-xl border text-left transition flex items-start gap-3 cursor-pointer ${
+                      operatorRole === roleItem.id
+                        ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-950/40 ring-2 ring-blue-500/30'
+                        : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <span className="text-xl shrink-0 mt-0.5">{roleItem.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-900 dark:text-white">
+                          {roleItem.title}
+                        </span>
+                        {operatorRole === roleItem.id && (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-600 text-white font-bold">
+                            ACTIVE CONSOLE
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">{roleItem.dept}</p>
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-600 dark:text-slate-400 mt-1.5 pt-1.5 border-t border-slate-200/50 dark:border-slate-800">
+                        <span className="font-semibold text-blue-600 dark:text-blue-400">WebSocket:</span>
+                        <code className="bg-slate-200/70 dark:bg-slate-800 px-1 py-0.5 rounded font-mono">{roleItem.wsChannel}</code>
+                        <span className="opacity-40">•</span>
+                        <span>Scope: {roleItem.scope}</span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Multi-Tenancy Protocol:</span>
+                <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                  Row-Level Security & Topic Isolation Active
                 </span>
               </div>
             </div>

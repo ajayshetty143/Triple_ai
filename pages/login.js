@@ -188,7 +188,32 @@ export default function LoginPage() {
       localStorage.setItem('smartcity_registered', 'true');
       localStorage.setItem('smartcity_user_email', 'operator@nexuscity.gov');
       localStorage.setItem('smartcity_operator_name', 'Alex Morgan (Commander)');
+      localStorage.setItem('smartcity_operator_role', 'commander');
       localStorage.setItem('smartcity_auth_token', 'TOKEN_DEMO_' + Date.now());
+    } catch (err) {}
+    setTimeout(() => {
+      router.push('/');
+    }, 600);
+  };
+
+  const handleSelectRoleLogin = (roleKey) => {
+    const roleConfig = {
+      commander: { email: 'commander@nexuscity.gov', name: 'Alex Morgan (Commander)', role: 'commander' },
+      traffic: { email: 'traffic.control@nexuscity.gov', name: 'Officer Ryan (Traffic & Signals)', role: 'traffic' },
+      fire: { email: 'fire.marshal@nexuscity.gov', name: 'Chief Martinez (Fire & Hazmat)', role: 'fire' },
+      security: { email: 'apartment.guard@nexuscity.gov', name: 'Warden David (Apartment Security)', role: 'security' },
+      ems: { email: 'trauma.ems@nexuscity.gov', name: 'Dr. Sarah Chen (Trauma EMS)', role: 'ems' },
+    }[roleKey];
+
+    if (!roleConfig) return;
+    if (soundFX) soundFX.playSuccess();
+    showToast(`⚡ Authorized as ${roleConfig.name}! Loading ${roleKey.toUpperCase()} Console...`, 'success');
+    try {
+      localStorage.setItem('smartcity_registered', 'true');
+      localStorage.setItem('smartcity_user_email', roleConfig.email);
+      localStorage.setItem('smartcity_operator_name', roleConfig.name);
+      localStorage.setItem('smartcity_operator_role', roleConfig.role);
+      localStorage.setItem('smartcity_auth_token', 'TOKEN_ROLE_' + roleKey.toUpperCase() + '_' + Date.now());
     } catch (err) {}
     setTimeout(() => {
       router.push('/');
@@ -449,6 +474,121 @@ export default function LoginPage() {
                     <span>⚡</span>
                     <span>1-CLICK DEMO ACCESS (INITIALIZE COMMAND)</span>
                   </button>
+
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between', 
+                      marginBottom: '0.6rem',
+                      fontSize: '0.75rem',
+                      fontWeight: '700',
+                      letterSpacing: '0.08em',
+                      color: 'var(--text-secondary)',
+                      textTransform: 'uppercase'
+                    }}>
+                      <span>⚡ MUNICIPAL STAKEHOLDER PERSONAS (RBAC)</span>
+                      <span style={{ color: 'var(--primary)', fontSize: '0.7rem' }}>Segregated Access</span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectRoleLogin('traffic')}
+                        style={{
+                          padding: '0.55rem 0.6rem',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(245, 158, 11, 0.4)',
+                          background: 'rgba(245, 158, 11, 0.08)',
+                          color: '#f59e0b',
+                          fontSize: '0.75rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          gap: '0.2rem',
+                          transition: 'all 0.15s ease',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <span style={{ fontSize: '0.85rem' }}>🚦 Traffic Control</span>
+                        <span style={{ fontSize: '0.65rem', opacity: 0.8, fontWeight: 500 }}>Highway & Signals</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSelectRoleLogin('fire')}
+                        style={{
+                          padding: '0.55rem 0.6rem',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(239, 68, 68, 0.4)',
+                          background: 'rgba(239, 68, 68, 0.08)',
+                          color: '#ef4444',
+                          fontSize: '0.75rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          gap: '0.2rem',
+                          transition: 'all 0.15s ease',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <span style={{ fontSize: '0.85rem' }}>🔥 Fire & Hazmat</span>
+                        <span style={{ fontSize: '0.65rem', opacity: 0.8, fontWeight: 500 }}>Suppression Bureau</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSelectRoleLogin('security')}
+                        style={{
+                          padding: '0.55rem 0.6rem',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(16, 185, 129, 0.4)',
+                          background: 'rgba(16, 185, 129, 0.08)',
+                          color: '#10b981',
+                          fontSize: '0.75rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          gap: '0.2rem',
+                          transition: 'all 0.15s ease',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <span style={{ fontSize: '0.85rem' }}>🏢 Apartment Guard</span>
+                        <span style={{ fontSize: '0.65rem', opacity: 0.8, fontWeight: 500 }}>Residential CCTV</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSelectRoleLogin('ems')}
+                        style={{
+                          padding: '0.55rem 0.6rem',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(6, 182, 212, 0.4)',
+                          background: 'rgba(6, 182, 212, 0.08)',
+                          color: '#06b6d4',
+                          fontSize: '0.75rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          gap: '0.2rem',
+                          transition: 'all 0.15s ease',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <span style={{ fontSize: '0.85rem' }}>🚑 Trauma EMS</span>
+                        <span style={{ fontSize: '0.65rem', opacity: 0.8, fontWeight: 500 }}>Hospital Triage</span>
+                      </button>
+                    </div>
+                  </div>
 
                   <form onSubmit={handleLoginSubmit} className="auth-form" noValidate>
                     {/* Username / Email */}
