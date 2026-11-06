@@ -26,14 +26,17 @@ YOUR OBJECTIVES:
    - Location / Landmark / Sector
    - Any injuries or trapped persons?
    - Any secondary hazards (fire spreading, power lines, fuel leak)?
-3. SCENARIO AWARENESS:
+3. SCENARIO AWARENESS & VISUAL EVIDENCE RULE:
    - If the user reports an active fire, building on fire, explosion, or major crisis:
      Acknowledge immediate dispatch, ask for nearest address/trapped victims, and IMMEDIATELY generate a CODE RED dossier:
      [INCIDENT DOSSIER READY: "Critical structural fire / emergency reported at building. Immediate multi-unit Fire Suppression, EMS Rescue, and Hazard Isolation dispatched."]
    - If the user reports a traffic accident, fallen cyclist, or medical incident:
      Compile a proportional routine/moderate dossier:
      [INCIDENT DOSSIER READY: "Local traffic incident: collision / person down on roadway. Routine EMS ambulance squad and traffic patrol dispatched."]
-   - If the user indicates or shows a harmless object, parked vehicle/motorcycle, or says "no one is hurt / just a photo / all clear":
+   - IF AN IMAGE OR OPTICAL EVIDENCE IS ATTACHED but the user doesn't describe the emergency:
+     DO NOT ASSUME THE SCENE IS SAFE. Acknowledge the upload and immediately generate:
+     [INCIDENT DOSSIER READY: "Optical evidence attached. Forwarding to Agent 1 Vision AI for immediate hazard detection."]
+   - ONLY IF the user explicitly says "no one is hurt", "false alarm", or "all clear":
      Compile an ALL CLEAR dossier:
      [INCIDENT DOSSIER READY: "Optical surveillance confirms safe municipal baseline. Harmless stationary vehicle/scene with zero collisions, zero injuries, zero structural damage, and no active hazards. Confirm All Clear green status."]
 4. Keep replies under 2-3 sentences so emergency triage is instantaneous.
@@ -102,6 +105,8 @@ YOUR OBJECTIVES:
         synthesizedIncident = `Critical Emergency Report: ${lastUserMsg.trim()}. Multi-unit Fire Suppression, Hazmat, and EMS rescue dispatched.`;
       } else if (lastUserLower.includes('accident') || lastUserLower.includes('crash') || lastUserLower.includes('skid') || lastUserLower.includes('injured') || lastUserLower.includes('cyclist') || lastUserLower.includes('fell') || lastUserLower.includes('down')) {
         synthesizedIncident = `Local Traffic Incident Report: ${lastUserMsg.trim()}. Routine EMS Ambulance and Traffic Patrol response dispatched.`;
+      } else if (evidenceLabel && evidenceLabel.toLowerCase().includes('evidence')) {
+        synthesizedIncident = `Optical evidence attached (${evidenceLabel}). Forwarding to Agent 1 Vision AI for immediate hazard detection.`;
       } else if (lastUserLower.includes('safe') || lastUserLower.includes('clear') || lastUserLower.includes('normal') || lastUserLower.includes('parked')) {
         synthesizedIncident = `Routine Baseline Observation: Optical surveillance confirms safe municipal baseline conditions.`;
       }
@@ -112,7 +117,10 @@ YOUR OBJECTIVES:
     const textToCheck = `${synthesizedIncident || ''} ${cleanMessage} ${lastUserMsg}`.toLowerCase();
     if (textToCheck.includes('fire') || textToCheck.includes('blaze') || textToCheck.includes('burn') || textToCheck.includes('explosion') || textToCheck.includes('gas') || textToCheck.includes('leak') || textToCheck.includes('flood') || textToCheck.includes('critical') || textToCheck.includes('trapped')) {
       suggestedPriority = 'critical';
-    } else if (textToCheck.includes('safe') || textToCheck.includes('all clear') || textToCheck.includes('peaceful') || textToCheck.includes('normal baseline') || textToCheck.includes('parked motorcycle') || textToCheck.includes('parked vehicle')) {
+    } else if (evidenceLabel && evidenceLabel.toLowerCase().includes('evidence') && !textToCheck.includes('safe') && !textToCheck.includes('all clear')) {
+      // If user uploaded optical evidence and did not explicitly say "all clear", don't assume safe!
+      suggestedPriority = 'minor';
+    } else if (textToCheck.includes('safe') || textToCheck.includes('all clear') || textToCheck.includes('peaceful') || textToCheck.includes('normal baseline')) {
       suggestedPriority = 'safe';
     }
 

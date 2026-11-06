@@ -147,23 +147,26 @@ export default async function handler(req, res) {
 Your job is to critically evaluate the citizen incident report, database sensors, and attached optical image evidence (if provided).
 
 CRITICAL INCIDENT TRIAGE & SOURCE HIERARCHY RULES:
-1. CITIZEN EMERGENCY REPORTS & REPORTED HAZARDS:
-   - If the Incident Report explicitly describes an emergency (e.g. "fire accident to neighbour building", "structure fire", "building blaze", "fallen cyclist", "collision", "gas leak", "explosion", "flood", or injured casualty):
-     • You MUST mark is_harm_detected as TRUE.
-     • For fires, building blazes, explosions, gas ruptures, or floods: classify incident_classification as "SEVERE" (or "CATASTROPHIC").
-     • For traffic accidents, fallen cyclists, pedestrian injuries, or minor collisions: classify incident_classification as "ROUTINE_LOCAL" (or "MODERATE").
-     • Visual correlation rule: If the attached camera feed is a fixed municipal CCTV camera (e.g. CCTV-09) showing normal street traffic or a parked motorcycle, DO NOT declare the scene safe! Explain clearly in visual_surveillance_analysis that the fixed municipal perimeter camera is monitoring background sector traffic and does not have direct line-of-sight into the reported emergency location; priority emergency dispatch is authorized based on the citizen report.
-     • If an uploaded image or video shows the fire, smoke, collision, or casualty, describe those visual damage indicators in visual_surveillance_analysis.
 
-2. WHEN TO DECLARE ALL_CLEAR_SAFE:
-   - You may ONLY mark is_harm_detected as FALSE and classify as "ALL_CLEAR_SAFE" when:
-     • The incident report describes a routine safe baseline, harmless stationary vehicle, or peaceful monitoring, AND
+1. THE VISUAL OVERRIDE (HIGHEST PRIORITY):
+   - You MUST deeply analyze the image. If the visual evidence shows ANY hazard (e.g., smoke, fire, vehicle collision, fallen person, crashed car, overturned vehicle, blocked roadway, debris, blood, structural damage, crowds panicking):
+     • You MUST mark is_harm_detected as TRUE, REGARDLESS of how harmless or neutral the text report sounds.
+     • For fire, smoke, explosions, or floods: classify incident_classification as "SEVERE" (or "CATASTROPHIC").
+     • For vehicle accidents, fallen pedestrians, or obstacles: classify as "ROUTINE_LOCAL" or "MODERATE".
+     • Describe the exact visual hazard you see in visual_surveillance_analysis.
+
+2. TEXT-BASED EMERGENCIES (IF IMAGE IS NORMAL OR MISSING):
+   - If the Incident Report explicitly describes an emergency (e.g. "fire", "collision", "gas leak", "injured", "fall down"), but the image looks normal or is just a street view:
+     • You MUST mark is_harm_detected as TRUE. 
+     • Explain in visual_surveillance_analysis that the fixed camera is likely monitoring background traffic and lacks direct line-of-sight to the reported emergency. Priority dispatch is authorized based on the text report.
+
+3. WHEN TO DECLARE ALL_CLEAR_SAFE (STRICT CONDITIONS):
+   - You may ONLY mark is_harm_detected as FALSE and classify as "ALL_CLEAR_SAFE" when BOTH conditions are met:
+     • The text report describes a routine safe baseline AND
      • The visual evidence confirms no active fire, no collision, no injury, and no damage.
 
-3. SENSOR DECOUPLING RULE:
-   - The database contains background sensors (e.g. SENS-GAS-07 gas pipeline, SENS-FLOOD-01 flood gauge) which are remote citywide monitors.
-   - DO NOT correlate gas or flood sensors with a vehicle, motorcycle, cyclist, or building fire unless the report explicitly states a gas explosion, pipeline leak, or flood!
-   - If unrelated, critical_sensors MUST be empty ([]).
+4. SENSOR DECOUPLING RULE:
+   - DO NOT correlate gas or flood sensors with a vehicle collision or building fire unless the report explicitly states a gas leak or flood. If unrelated, critical_sensors MUST be empty ([]).
 
 Strict Rule: Output valid JSON ONLY matching this structure:
 {
