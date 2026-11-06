@@ -481,8 +481,17 @@ export default function Dashboard() {
       }
     }
 
-    const mediaToUse = overrideMedia !== undefined ? overrideMedia : activeMedia;
-    const cameraToUse = overrideCamera !== undefined ? overrideCamera : activeCameraLabel;
+    // Decoupling Rule:
+    // If overrideMedia is passed (e.g. from preset scenario test button), use it.
+    // If user explicitly uploaded evidence or took a camera snapshot (mediaSource === 'upload'), use activeMedia.
+    // Otherwise, when chatting directly without uploading, do NOT attach the default CCTV image so the chat is never overridden.
+    const mediaToUse = overrideMedia !== undefined 
+      ? overrideMedia 
+      : (mediaSource === 'upload' ? activeMedia : null);
+
+    const cameraToUse = overrideCamera !== undefined 
+      ? overrideCamera 
+      : (mediaSource === 'upload' ? activeCameraLabel : 'Citizen Emergency Dialogue Intake');
 
     setLoading(true);
     setError(null);
@@ -1578,20 +1587,37 @@ export default function Dashboard() {
               </div>
 
               {/* RENDER ATTACHED EVIDENCE IN REPORT */}
-              {activeMedia && (
+              {result?.meta?.attached_image ? (
                 <div className="p-3.5 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
                   <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-950 shrink-0 border border-slate-200 dark:border-slate-700">
-                    <img src={activeMedia} alt="Evidence Rendered" className="w-full h-full object-cover" />
+                    <img src={result.meta.attached_image} alt="Evidence Rendered" className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" /> Optical Evidence Attached & Processed
                     </span>
                     <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
-                      {activeCameraLabel}
+                      {result?.meta?.camera_source || activeCameraLabel}
                     </p>
                     <span className="text-[11px] text-slate-500">
-                      Cross-referenced by Agent 1 (Data & Vision) and Agent 3 for tactical unit deployment.
+                      Cross-referenced by Agent 1 (Multimodal Vision) and Agent 3 for tactical unit deployment.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200 dark:border-blue-800">
+                    <MessageSquare className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Citizen Dialogue Dispatch // Text Triage Mode
+                    </span>
+                    <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
+                      Direct Incident Ingestion (Decoupled from background municipal cameras)
+                    </p>
+                    <span className="text-[11px] text-slate-500">
+                      Multi-agent cascade executed directly on reported emergency context with zero optical bias.
                     </span>
                   </div>
                 </div>
@@ -1743,9 +1769,13 @@ export default function Dashboard() {
 
               {/* Optical Corroboration + Rendered Evidence side-by-side */}
               <div className="p-4 rounded-2xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                {activeMedia && (
+                {result?.meta?.attached_image ? (
                   <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-950 shrink-0 border border-slate-200 dark:border-slate-700">
-                    <img src={activeMedia} alt="Evidence Render" className="w-full h-full object-cover" />
+                    <img src={result.meta.attached_image} alt="Evidence Render" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200 dark:border-blue-800">
+                    <MessageSquare className="w-7 h-7" />
                   </div>
                 )}
                 <div>
