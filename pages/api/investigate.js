@@ -276,13 +276,13 @@ CRITICAL DISPATCH RULES:
       {
         "step": 2,
         "title": "Phase 2: Medical Triage & Utility Isolation",
-        "units_dispatched": ["Metropolis Trauma EMS", "Municipal Gas & Power Isolation Squad"],
+        "units_dispatched": ["Nexus City Trauma EMS", "Municipal Gas & Power Isolation Squad"],
         "action_orders": "Establish forward medical triage point; isolate electrical mains and gas valves to prevent secondary structural explosions."
       },
       {
         "step": 3,
         "title": "Phase 3: Civilian Evacuation & Sector Cordon",
-        "units_dispatched": ["Metropolis Police Tactical", "Civil Defense Evacuation Squad"],
+        "units_dispatched": ["Nexus City Police Tactical", "Civil Defense Evacuation Squad"],
         "action_orders": "Evacuate adjacent buildings within 300-meter safety radius; enforce arterial lockdown for incoming emergency apparatus."
       }
     ]
@@ -301,7 +301,7 @@ CRITICAL DISPATCH RULES:
       {
         "step": 2,
         "title": "Phase 2: Traffic Safety & Lane Diversion",
-        "units_dispatched": ["Metropolis Traffic Patrol"],
+        "units_dispatched": ["Nexus City Traffic Patrol"],
         "action_orders": "Establish temporary safety cordon around incident and divert oncoming traffic."
       },
       {

@@ -114,8 +114,8 @@ export default function LoginPage() {
   const [authView, setAuthView] = useState('login'); // 'login' | 'signup'
   
   // Login Form (with standard demo credentials pre-filled for immediate testing)
-  const [loginEmail, setLoginEmail] = useState('operator@metropolis.gov');
-  const [loginPassword, setLoginPassword] = useState('metropolis2026');
+  const [loginEmail, setLoginEmail] = useState('operator@nexuscity.gov');
+  const [loginPassword, setLoginPassword] = useState('nexuscity2026');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -183,10 +183,10 @@ export default function LoginPage() {
 
   const handleQuickDemoLogin = () => {
     if (soundFX) soundFX.playSuccess();
-    showToast('⚡ 1-Click Demo Access Authorized! Initializing Central Command...', 'success');
+    showToast('⚡ 1-Click Demo Access Authorized! Initializing Nexus City Command...', 'success');
     try {
       localStorage.setItem('smartcity_registered', 'true');
-      localStorage.setItem('smartcity_user_email', 'operator@metropolis.gov');
+      localStorage.setItem('smartcity_user_email', 'operator@nexuscity.gov');
       localStorage.setItem('smartcity_operator_name', 'Alex Morgan (Commander)');
       localStorage.setItem('smartcity_auth_token', 'TOKEN_DEMO_' + Date.now());
     } catch (err) {}
@@ -197,8 +197,8 @@ export default function LoginPage() {
 
   const handleLoginSubmit = (e) => {
     e.preventDefault();
-    const effectiveEmail = loginEmail.trim() || 'operator@metropolis.gov';
-    const effectivePassword = loginPassword.trim() || 'metropolis2026';
+    const effectiveEmail = loginEmail.trim() || 'operator@nexuscity.gov';
+    const effectivePassword = loginPassword.trim() || 'nexuscity2026';
 
     setLoginLoading(true);
     setTimeout(() => {
@@ -272,8 +272,8 @@ export default function LoginPage() {
   return (
     <div className="login-page-root">
       <Head>
-        <title>SmartCity OS // Metropolis Gateway Login</title>
-        <meta name="description" content="Central Smart City Operator Authentication & Gateway" />
+        <title>NEXUS CITY OS // Autonomous Command Gateway</title>
+        <meta name="description" content="Central Nexus City Operator Authentication & Gateway" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
@@ -308,7 +308,7 @@ export default function LoginPage() {
         <header className="top-nav">
           <div className="brand-badge">
             <span className="pulse-dot" />
-            <span>SMART CITY OS // METROPOLIS</span>
+            <span>NEXUS CITY // COMMAND OS</span>
           </div>
 
           <div className="controls-group">
@@ -418,7 +418,7 @@ export default function LoginPage() {
                 <div id="login-view" className="auth-view active">
                   <div className="card-header">
                     <h1 className="card-title">Operator Login</h1>
-                    <p className="card-subtitle">Connect to the central metropolis smart grid</p>
+                    <p className="card-subtitle">Connect to the central Nexus City smart grid</p>
                   </div>
 
                   {/* 1-Click Quick Demo Login Button */}
@@ -781,7 +781,7 @@ export default function LoginPage() {
         <footer className="status-bar">
           <div className="status-item">
             <span className="status-dot" />
-            <span>METROPOLIS SMART GRID // ONLINE</span>
+            <span>NEXUS CITY SMART GRID // ONLINE</span>
           </div>
           <div className="status-item">
             <span>Infrastructure Telemetry: Normal</span>

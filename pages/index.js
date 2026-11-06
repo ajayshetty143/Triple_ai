@@ -53,7 +53,7 @@ const PRESET_SCENARIOS = [
     badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60",
     icon: CheckCircle,
     text: "Optical surveillance confirms safe municipal baseline. Harmless stationary vehicle parked peacefully with zero collisions, zero injuries, zero structural damage, and no active hazards. Confirm safe green-light status.",
-    cctvId: "CCTV-09 (Metropolis Boulevard)",
+    cctvId: "CCTV-09 (Nexus City Boulevard)",
     cctvImage: "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -173,7 +173,7 @@ export default function Dashboard() {
   // Live Municipal IoT Sensors
   const [citySensors, setCitySensors] = useState([
     { id: 'SENS-GAS-07', name: 'Mainline Gas Pipeline Monitor G-7', type: 'gas_pipeline', location: 'Sector 4 - 5th Ave', status: 'NORMAL', metric: '44.8 PSI' },
-    { id: 'SENS-FLOOD-01', name: 'Stormwater Surge Drainage Gauge F-1', type: 'flood_gauge', location: 'Metropolis Riverfront', status: 'NORMAL', metric: '1.2m Depth' },
+    { id: 'SENS-FLOOD-01', name: 'Stormwater Surge Drainage Gauge F-1', type: 'flood_gauge', location: 'Nexus City Riverfront', status: 'NORMAL', metric: '1.2m Depth' },
     { id: 'SENS-PWR-12', name: 'High-Voltage Substation Transformer T-12', type: 'power_grid', location: 'Downtown Grid Core', status: 'NORMAL', metric: '13.8 kV Stable' },
     { id: 'SENS-MED-04', name: 'Central Trauma Hospital Medical Hub', type: 'medical_hub', location: 'Sector 2 Medical Corridor', status: 'NORMAL', metric: '88% ICU Avail' },
     { id: 'SENS-TRAF-09', name: 'Arterial Traffic Flow Optical Sensor', type: 'traffic_camera', location: '5th Ave & Elm Junction', status: 'NORMAL', metric: '42 km/h Flow' }
@@ -532,14 +532,14 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-[#070a14] flex flex-col items-center justify-center text-white font-sans p-4">
         <Head>
-          <title>Metropolis OS // Verifying Gateway Access</title>
+          <title>NEXUS CITY OS // Verifying Gateway Access</title>
         </Head>
         <div className="relative flex items-center justify-center mb-6">
           <div className="w-16 h-16 rounded-full border-2 border-cyan-500/30 border-t-cyan-400 animate-spin" />
           <div className="absolute w-8 h-8 rounded-full bg-cyan-500/20 animate-ping" />
         </div>
         <div className="text-sm font-mono tracking-widest text-cyan-400 uppercase text-center">
-          METROPOLIS SECURITY GATEWAY // VERIFYING OPERATOR AUTHORIZATION
+          NEXUS CITY SECURITY GATEWAY // VERIFYING OPERATOR AUTHORIZATION
         </div>
         <div className="text-xs text-slate-500 mt-2 text-center">
           Connecting to central smart city neural core...
@@ -551,8 +551,8 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen transition-colors duration-200 font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       <Head>
-        <title>METROPOLIS // Autonomous Emergency Incident Platform</title>
-        <meta name="description" content="Enterprise Smart City Incident Orchestration System" />
+        <title>NEXUS CITY // Autonomous Emergency Incident Platform</title>
+        <meta name="description" content="NEXUS CITY — Autonomous Smart City Incident Investigation using Collaborative AI Agents" />
       </Head>
 
       {/* Master Top Navigation Bar & Unified View Switcher (ALL IN ONE PLACE) */}
@@ -566,7 +566,7 @@ export default function Dashboard() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">Metropolis Command OS</span>
+                <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">NEXUS CITY Command OS</span>
                 <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-cyan-400 border border-slate-200 dark:border-slate-700">
                   Enterprise v2.4
                 </span>
@@ -681,7 +681,7 @@ export default function Dashboard() {
                 type="button"
                 onClick={() => router.push('/login')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
-                title="Connect to Metropolis Gateway"
+                title="Connect to Nexus City Gateway"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Gateway Login</span>
@@ -728,7 +728,7 @@ export default function Dashboard() {
                     CHANNEL: PRIMARY
                   </span>
                   <span className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded border border-white/10">
-                    METROPOLIS SECTOR 4
+                    NEXUS CITY SECTOR 4
                   </span>
                 </div>
               </div>
