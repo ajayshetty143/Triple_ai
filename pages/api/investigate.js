@@ -151,8 +151,8 @@ CRITICAL INCIDENT TRIAGE & SOURCE HIERARCHY RULES:
 1. THE VISUAL OVERRIDE (HIGHEST PRIORITY):
    - You MUST deeply analyze the image. If the visual evidence shows ANY hazard (e.g., smoke, fire, vehicle collision, fallen person, crashed car, overturned vehicle, blocked roadway, debris, blood, structural damage, crowds panicking):
      • You MUST mark is_harm_detected as TRUE, REGARDLESS of how harmless or neutral the text report sounds.
-     • For fire, smoke, explosions, or floods: classify incident_classification as "SEVERE" (or "CATASTROPHIC").
-     • For vehicle accidents, fallen pedestrians, or obstacles: classify as "ROUTINE_LOCAL" or "MODERATE".
+     • For active fire, smoke, explosions, floods, OR major/severe high-impact vehicle collisions (e.g. truck vs car collision, crushed passenger cabin/roof, shattered windshield with structural intrusion, overturned/rolled-over vehicle, head-on impact, trapped occupants, major highway blockage): classify incident_classification as "SEVERE" (or "CATASTROPHIC").
+     • For minor local incidents (e.g. fallen cyclist/pedestrian with minor scrapes, low-speed fender-bender with intact cabin and zero structural crush, minor bike skid): classify as "ROUTINE_LOCAL" or "MODERATE".
      • Describe the exact visual hazard you see in visual_surveillance_analysis.
 
 2. TEXT-BASED EMERGENCIES (IF IMAGE IS NORMAL OR MISSING):
@@ -216,13 +216,13 @@ Inspect the optical evidence and provide your structured JSON data summary now.`
 You receive the exact situational report from Agent 1.
 
 CRITICAL THREAT & PROPORTIONALITY RULES:
-- If Agent 1 classifies as "SEVERE" or "CATASTROPHIC" (active fire, building fire, explosion, gas main rupture, flood):
+- If Agent 1 classifies as "SEVERE" or "CATASTROPHIC" (active fire, building fire, explosion, gas main rupture, flood, OR major high-impact crash, truck vs car collision, crushed passenger cabin, overturned vehicle, major highway blockage):
   • overall_threat_level MUST be "CRITICAL".
-  • primary_hazards MUST identify the urgent fire/life-safety risks (e.g. ["Active Structure Fire", "Rapid Flame Propagation to Adjacent Buildings", "Smoke Inhalation", "Structural Collapse Risk"]).
-  • cascading_vulnerabilities MUST identify adjacent infrastructure, residential/commercial power isolation, and civilian transit grid.
-  • time_to_critical_failure: "Immediate (< 8 minutes to flashover/structure compromise)".
-  • analyst_assessment: "High-urgency emergency detected. Immediate multi-unit fire suppression and emergency cordon required."
-- If Agent 1 classifies as "ROUTINE_LOCAL" or "MODERATE" (e.g. bike skid, fallen cyclist, local collision):
+  • primary_hazards MUST identify the urgent life-safety risks (e.g. ["Severe Vehicle Collision & Cabin Intrusion", "Trapped Occupants Extrication Required", "Active Highway Arterial Blockage (NH 48)", "Fluid/Fuel Hazard", "Active Structure Fire"]).
+  • cascading_vulnerabilities MUST identify adjacent transit corridors, arterial paralysis, and civilian trauma care access.
+  • time_to_critical_failure: "Immediate (< 8 minutes to trauma golden hour / structural compromise)".
+  • analyst_assessment: "High-urgency emergency detected. Immediate multi-unit tactical rescue and emergency cordon required."
+- If Agent 1 classifies as "ROUTINE_LOCAL" or "MODERATE" (e.g. minor bike skid, fallen cyclist, low-speed fender-bender):
   • overall_threat_level MUST be "LOW" (or "MEDIUM").
   • primary_hazards: ["Local Roadway Obstruction", "Minor Civilian Injury"].
   • cascading_vulnerabilities: [{ "system": "Transit Corridors", "risk": "Localized lane slowdown. Primary arterials open." }].
@@ -265,32 +265,32 @@ You receive the exact cascading risk analysis from Agent 2 and telemetry from Ag
 Your mission is to authorize an authoritative, calibrated response.
 
 CRITICAL DISPATCH RULES:
-- If threat_level is "CRITICAL" or "HIGH" (active fire, building fire, gas explosion, heavy flood):
+- If threat_level is "CRITICAL" or "HIGH" (active fire, building fire, gas explosion, heavy flood, OR major high-impact collision, truck vs car crash, crushed vehicle cabin, overturned vehicle):
   • directive_title: "OPERATION SHIELD: CODE RED EMERGENCY DIRECTIVE"
   • threat_level: "CRITICAL" (RED LIGHT STATUS - CRISIS RESPONSE)
   • status: "DISPATCH_AUTHORIZED"
   • three_step_dispatch_plan: [
       {
         "step": 1,
-        "title": "Phase 1: Rapid Fire Suppression & Rescue Deployment",
-        "units_dispatched": ["Engine Company 9", "Ladder Truck 3", "Battalion Chief"],
-        "action_orders": "Deploy heavy fire engines with aerial master streams to halt structure fire propagation and commence primary search & rescue."
+        "title": "Phase 1: Rapid Heavy Rescue & Fire/Extrication Deployment",
+        "units_dispatched": ["Heavy Rescue Squad 7", "Ladder Truck 3 / Extrication Unit", "Battalion Chief"],
+        "action_orders": "Deploy heavy rescue units and hydraulic extrication tools (Jaws of Life) to free trapped occupants or suppress flame propagation."
       },
       {
         "step": 2,
-        "title": "Phase 2: Medical Triage & Utility Isolation",
-        "units_dispatched": ["Nexus City Trauma EMS", "Municipal Gas & Power Isolation Squad"],
-        "action_orders": "Establish forward medical triage point; isolate electrical mains and gas valves to prevent secondary structural explosions."
+        "title": "Phase 2: Critical Trauma Triage & Emergency Utility Isolation",
+        "units_dispatched": ["Nexus City Trauma EMS", "Critical Care Paramedic Squad"],
+        "action_orders": "Establish forward high-acuity medical triage; prepare immediate transport to regional trauma centers and isolate hazards."
       },
       {
         "step": 3,
-        "title": "Phase 3: Civilian Evacuation & Sector Cordon",
-        "units_dispatched": ["Nexus City Police Tactical", "Civil Defense Evacuation Squad"],
-        "action_orders": "Evacuate adjacent buildings within 300-meter safety radius; enforce arterial lockdown for incoming emergency apparatus."
+        "title": "Phase 3: Highway Cordon & Arterial Transit Diversion",
+        "units_dispatched": ["Nexus City Police Tactical", "Highway Traffic Interceptor Unit"],
+        "action_orders": "Enforce arterial perimeter; establish safe multi-lane corridor for incoming emergency apparatus and divert civilian transit."
       }
     ]
-  • public_broadcast_alert: "EMERGENCY ADVISORY: Active structure fire reported. Avoid sector immediately. Clear all transit corridors for emergency apparatus."
-- If threat_level is "LOW" or "ROUTINE" or "MEDIUM" (bike skid, cyclist down, pedestrian slip, minor vehicle collision):
+  • public_broadcast_alert: "EMERGENCY ADVISORY: Critical high-urgency crisis / major collision reported. Avoid sector immediately. Clear all transit corridors for emergency rescue apparatus."
+- If threat_level is "LOW" or "ROUTINE" or "MEDIUM" (bike skid, cyclist down, pedestrian slip, minor low-speed fender-bender):
   • directive_title: "LOCAL TRAFFIC & MEDICAL RESPONSE DIRECTIVE"
   • threat_level: "LOW" (YELLOW LIGHT STATUS - ROUTINE LOCAL RESPONSE)
   • status: "DISPATCH_AUTHORIZED"

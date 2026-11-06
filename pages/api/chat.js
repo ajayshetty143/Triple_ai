@@ -101,8 +101,8 @@ YOUR OBJECTIVES:
     const lastUserLower = lastUserMsg.toLowerCase();
 
     if (!synthesizedIncident && lastUserMsg) {
-      if (lastUserLower.includes('fire') || lastUserLower.includes('blaze') || lastUserLower.includes('burn') || lastUserLower.includes('smoke') || lastUserLower.includes('explosion') || lastUserLower.includes('gas') || lastUserLower.includes('flood')) {
-        synthesizedIncident = `Critical Emergency Report: ${lastUserMsg.trim()}. Multi-unit Fire Suppression, Hazmat, and EMS rescue dispatched.`;
+      if (lastUserLower.includes('fire') || lastUserLower.includes('blaze') || lastUserLower.includes('burn') || lastUserLower.includes('smoke') || lastUserLower.includes('explosion') || lastUserLower.includes('gas') || lastUserLower.includes('flood') || lastUserLower.includes('truck') || lastUserLower.includes('crush') || lastUserLower.includes('highway') || lastUserLower.includes('pileup') || lastUserLower.includes('trapped') || lastUserLower.includes('head-on')) {
+        synthesizedIncident = `Critical Emergency Report: ${lastUserMsg.trim()}. Multi-unit Rescue, Hazmat, and Trauma EMS dispatched.`;
       } else if (lastUserLower.includes('accident') || lastUserLower.includes('crash') || lastUserLower.includes('skid') || lastUserLower.includes('injured') || lastUserLower.includes('cyclist') || lastUserLower.includes('fell') || lastUserLower.includes('down')) {
         synthesizedIncident = `Local Traffic Incident Report: ${lastUserMsg.trim()}. Routine EMS Ambulance and Traffic Patrol response dispatched.`;
       } else if (evidenceLabel && evidenceLabel.toLowerCase().includes('evidence')) {
@@ -115,7 +115,7 @@ YOUR OBJECTIVES:
     // Determine suggested priority for UI synchronization
     let suggestedPriority = 'minor';
     const textToCheck = `${synthesizedIncident || ''} ${cleanMessage} ${lastUserMsg}`.toLowerCase();
-    if (textToCheck.includes('fire') || textToCheck.includes('blaze') || textToCheck.includes('burn') || textToCheck.includes('explosion') || textToCheck.includes('gas') || textToCheck.includes('leak') || textToCheck.includes('flood') || textToCheck.includes('critical') || textToCheck.includes('trapped')) {
+    if (textToCheck.includes('fire') || textToCheck.includes('blaze') || textToCheck.includes('burn') || textToCheck.includes('explosion') || textToCheck.includes('gas') || textToCheck.includes('leak') || textToCheck.includes('flood') || textToCheck.includes('critical') || textToCheck.includes('trapped') || textToCheck.includes('truck') || textToCheck.includes('crush') || textToCheck.includes('highway') || textToCheck.includes('pileup') || textToCheck.includes('head-on')) {
       suggestedPriority = 'critical';
     } else if (evidenceLabel && evidenceLabel.toLowerCase().includes('evidence') && !textToCheck.includes('safe') && !textToCheck.includes('all clear')) {
       // If user uploaded optical evidence and did not explicitly say "all clear", don't assume safe!

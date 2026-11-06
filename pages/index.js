@@ -988,7 +988,7 @@ export default function Dashboard() {
 
               {/* Ready Incident Dossier Card */}
               {activeDossier && (() => {
-                const isCrit = opticalScenario === 'critical' || /fire|blaze|burn|explosion|gas|leak|flood|critical|hazard|trapped|smoke/i.test(activeDossier);
+                const isCrit = opticalScenario === 'critical' || /fire|blaze|burn|explosion|gas|leak|flood|critical|hazard|trapped|smoke|truck|crush|highway|pileup|head-on/i.test(activeDossier);
                 const isMin = !isCrit && (opticalScenario === 'minor' || /accident|collision|skid|injured|cyclist|pedestrian|hurt|fall/i.test(activeDossier));
 
                 const cardBg = isCrit 

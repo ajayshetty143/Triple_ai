@@ -21,13 +21,17 @@ ${fileName ? `Incoming Evidence File Name: "${fileName}"` : ''}
 
 Analyze the attached visual evidence carefully and objectively:
 1. Examine if there is any visible harm, accident, collision, crashed or damaged vehicle, overturned car, fallen cyclist/motorcyclist/pedestrian, roadway obstruction, fire, smoke, flood, or injury.
-2. If an accident, collision, damage, or injury is present:
-   - Identify what happened (e.g. overturned car, collision between vehicles, road accident, casualty on asphalt).
-   - Identify the vehicles and individuals involved.
-   - You MUST mark harm_detected as true.
-   - Set severity to "ROUTINE_LOCAL" for road collisions, vehicle accidents, skids, or "CRITICAL" for major fires/explosions.
-   - List appropriate response units (e.g. EMS Ambulance Squad, Local Traffic Patrol, Fire & Rescue).
-   - In suggested_incident_text: Provide an authoritative dispatch briefing describing the accident and requesting immediate units.
+2. SEVERITY CLASSIFICATION RULES:
+   - You MUST mark harm_detected as true whenever ANY accident, collision, vehicle damage, hazard, or casualty is observed.
+   - Set severity to "CRITICAL" (CODE RED) if ANY of the following are observed:
+     • Severe or high-impact vehicle collisions (e.g. truck vs car collision, crushed passenger cabin, crushed roof or A-pillar, shattered windshield with structural intrusion, overturned/rolled-over vehicle, head-on impact, trapped occupants).
+     • Major arterial/national highway blockage with multi-vehicle debris field or heavy traffic halting.
+     • Active structure/building fire, visible flames, smoke plume, chemical spill, gas leak, explosion, or major flooding.
+     • List urgent response units (e.g. Heavy Rescue Extrication Squad, Ladder Truck, Nexus City Trauma EMS, Highway Tactical Police).
+   - Set severity to "ROUTINE_LOCAL" (YELLOW ALERT) ONLY for minor, low-impact incidents:
+     • Minor bike skids, fallen cyclist/pedestrian with minor scrapes, low-speed fender-bender with intact passenger cabin and zero structural crush.
+     • List local response units (e.g. EMS Ambulance Squad 4, Local Traffic Patrol, Tow Truck).
+   - In suggested_incident_text: Provide an authoritative dispatch briefing describing the exact vehicles, damage, and requesting appropriate units.
 3. If the scene is safe, peaceful, an intact parked vehicle/motorcycle with zero crash damage, an empty street, or normal pedestrians walking:
    - Mark harm_detected as false.
    - Set severity to "ALL_CLEAR".
